@@ -79,8 +79,5 @@ commit_keys.each do |key|
 end
 ## If error, exit as status 1
 if (response.code == 403) then
-  #exit 1
+  exit 1
 end
-
-## Hardcode exit for testing
-exit 1

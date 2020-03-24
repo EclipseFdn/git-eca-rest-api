@@ -24,6 +24,9 @@
             volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: secret.properties
+              mountPath: /run/secrets/
+              readOnly: true
           - name: jnlp
             resources:
               limits:
