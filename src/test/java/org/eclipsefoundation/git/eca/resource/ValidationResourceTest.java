@@ -65,7 +65,7 @@ public class ValidationResourceTest {
 		given()
 			.body(vr)
 			.contentType(ContentType.JSON)
-				.when().post("/git/eca")
+				.when().post("/eca")
 				.then()
 					.statusCode(200)
 					.body("passed", is(true),
@@ -113,7 +113,7 @@ public class ValidationResourceTest {
 		given()
 			.body(vr)
 			.contentType(ContentType.JSON)
-				.when().post("/git/eca")
+				.when().post("/eca")
 				.then()
 					.statusCode(200)
 					.body("passed", is(true),
@@ -147,7 +147,7 @@ public class ValidationResourceTest {
 		given()
 			.body(vr)
 			.contentType(ContentType.JSON)
-				.when().post("/git/eca")
+				.when().post("/eca")
 				.then()
 					.statusCode(200)
 					.body("passed", is(true),
@@ -182,7 +182,7 @@ public class ValidationResourceTest {
 		given()
 			.body(vr)
 			.contentType(ContentType.JSON)
-				.when().post("/git/eca")
+				.when().post("/eca")
 				.then()
 					.statusCode(200)
 					.body("passed", is(true),
@@ -217,7 +217,7 @@ public class ValidationResourceTest {
 		given()
 			.body(vr)
 			.contentType(ContentType.JSON)
-				.when().post("/git/eca")
+				.when().post("/eca")
 				.then()
 					.statusCode(403)
 					.body("passed", is(false),
@@ -254,7 +254,7 @@ public class ValidationResourceTest {
 		given()
 			.body(vr)
 			.contentType(ContentType.JSON)
-				.when().post("/git/eca")
+				.when().post("/eca")
 				.then()
 					.statusCode(403)
 					.body("passed", is(false),
@@ -296,7 +296,7 @@ public class ValidationResourceTest {
 		given()
 			.body(vr)
 			.contentType(ContentType.JSON)
-				.when().post("/git/eca")
+				.when().post("/eca")
 				.then()
 					.statusCode(200)
 					.body("passed", is(true),
@@ -324,7 +324,7 @@ public class ValidationResourceTest {
 		given()
 			.body(vr)
 			.contentType(ContentType.JSON)
-				.when().post("/git/eca")
+				.when().post("/eca")
 				.then()
 					.statusCode(403)
 					.body("passed", is(false),
@@ -366,7 +366,7 @@ public class ValidationResourceTest {
 		given()
 			.body(vr)
 			.contentType(ContentType.JSON)
-				.when().post("/git/eca")
+				.when().post("/eca")
 				.then()
 					.statusCode(200)
 					.body("passed", is(true),
@@ -394,7 +394,7 @@ public class ValidationResourceTest {
 		given()
 			.body(vr)
 			.contentType(ContentType.JSON)
-				.when().post("/git/eca")
+				.when().post("/eca")
 				.then()
 					.statusCode(403)
 					.body("passed", is(false),
@@ -429,7 +429,7 @@ public class ValidationResourceTest {
 		given()
 			.body(vr)
 			.contentType(ContentType.JSON)
-				.when().post("/git/eca")
+				.when().post("/eca")
 				.then()
 					.statusCode(403)
 					.body("passed", is(false),
@@ -468,7 +468,7 @@ public class ValidationResourceTest {
 		given()
 			.body(vr)
 			.contentType(ContentType.JSON)
-				.when().post("/git/eca")
+				.when().post("/eca")
 				.then()
 					.statusCode(403)
 					.body("passed", is(false),
@@ -507,7 +507,7 @@ public class ValidationResourceTest {
 		given()
 			.body(vr)
 			.contentType(ContentType.JSON)
-				.when().post("/git/eca")
+				.when().post("/eca")
 				.then()
 					.statusCode(403)
 					.body("passed", is(false),

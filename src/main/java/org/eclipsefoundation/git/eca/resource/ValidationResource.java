@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory;
  * @author Martin Lowe
  *
  */
-@Path("/git/eca")
+@Path("/eca")
 @Consumes({ MediaType.APPLICATION_JSON })
 @Produces({ MediaType.APPLICATION_JSON })
 public class ValidationResource {
