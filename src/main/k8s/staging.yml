@@ -28,6 +28,10 @@ spec:
           requests:
             cpu: 100m
             memory: 512Mi
+      volumes:
+      - name: secret.properties
+        secret:
+          secretName: secret.properties
 ---
 apiVersion: "v1"
 kind: "Service"
