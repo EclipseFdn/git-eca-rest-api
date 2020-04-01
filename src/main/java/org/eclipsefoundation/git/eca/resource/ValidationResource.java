@@ -9,6 +9,7 @@
  ******************************************************************************/
 package org.eclipsefoundation.git.eca.resource;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -35,6 +36,7 @@ import org.eclipsefoundation.git.eca.model.Project;
 import org.eclipsefoundation.git.eca.model.ValidationRequest;
 import org.eclipsefoundation.git.eca.model.ValidationResponse;
 import org.eclipsefoundation.git.eca.namespace.APIStatusCode;
+import org.eclipsefoundation.git.eca.namespace.ProviderType;
 import org.eclipsefoundation.git.eca.service.CachingService;
 import org.eclipsefoundation.git.eca.service.OAuthService;
 import org.slf4j.Logger;
@@ -172,11 +174,10 @@ public class ValidationResource {
 			return true;
 		}
 		// validate author access to the current repo
-		validateAuthorAccess(response, c, eclipseAuthor, request.getRepoUrl());
+		validateAuthorAccess(response, c, eclipseAuthor, request);
 
 		// only committers can push on behalf of other users
-		if (!eclipseAuthor.equals(eclipseCommitter)
-				&& !isCommitter(response, eclipseCommitter, c.getHash(), request.getRepoUrl())) {
+		if (!eclipseAuthor.equals(eclipseCommitter) && !isCommitter(response, eclipseCommitter, c.getHash(), request)) {
 			addMessage(response, "You are not a project committer.", c.getHash());
 			addMessage(response, "Only project committers can push on behalf of others.", c.getHash());
 			addError(response, "You must be a committer to push on behalf of others.", c.getHash());
@@ -195,9 +196,11 @@ public class ValidationResource {
 	 * @param repoUrl       repo URL for the current commit set, to be used when
 	 *                      checking projects
 	 */
-	private void validateAuthorAccess(ValidationResponse r, Commit c, EclipseUser eclipseAuthor, String repoUrl) {
+	private void validateAuthorAccess(ValidationResponse r, Commit c, EclipseUser eclipseAuthor,
+			ValidationRequest req) {
+
 		// check if the author matches to an eclipse user and is a committer
-		if (isCommitter(r, eclipseAuthor, c.getHash(), repoUrl)) {
+		if (isCommitter(r, eclipseAuthor, c.getHash(), req)) {
 			addMessage(r, "The author is a committer on the project.", c.getHash());
 		} else {
 			addMessage(r, "The author is not a committer on the project.", c.getHash());
@@ -243,20 +246,10 @@ public class ValidationResource {
 	 *                projects
 	 * @return true if user is considered a committer, false otherwise.
 	 */
-	private boolean isCommitter(ValidationResponse r, EclipseUser user, String hash, String repoUrl) {
-		// check for all projects that make use of the given repo
-		@SuppressWarnings("unchecked")
-		Optional<List<Project>> cachedProjects = cache.get("projects|" + repoUrl, () -> projects.getProject(),
-				(Class<List<Project>>) (Object) List.class);
-		if (!cachedProjects.isPresent() || cachedProjects.get().isEmpty()) {
-			return false;
-		}
-
+	private boolean isCommitter(ValidationResponse r, EclipseUser user, String hash, ValidationRequest req) {
 		// filter the projects based on the repo URL. At least one repo in project must
 		// match the repo URL to be valid
-		List<Project> filteredProjects = cachedProjects.get().stream()
-				.filter(p -> p.getRepos().stream().anyMatch(re -> re.getUrl().equals(repoUrl)))
-				.collect(Collectors.toList());
+		List<Project> filteredProjects = retrieveProjectsForRequest(req);
 
 		// iterate over filtered projects
 		for (Project p : filteredProjects) {
@@ -298,6 +291,41 @@ public class ValidationResource {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Retrieves projects valid for the current request, or an empty list if no data
+	 * or matching project repos could be found.
+	 * 
+	 * @param req the current request
+	 * @return list of matching projects for the current request, or an empty list
+	 *         if none found.
+	 */
+	private List<Project> retrieveProjectsForRequest(ValidationRequest req) {
+		String repoUrl = req.getRepoUrl();
+		// check for all projects that make use of the given repo
+		@SuppressWarnings("unchecked")
+		Optional<List<Project>> cachedProjects = cache.get("projects", () -> projects.getProject(),
+				(Class<List<Project>>) (Object) List.class);
+		if (!cachedProjects.isPresent() || cachedProjects.get().isEmpty()) {
+			return Collections.emptyList();
+		}
+
+		// filter the projects based on the repo URL. At least one repo in project must
+		// match the repo URL to be valid
+		if (ProviderType.GITLAB.equals(req.getProvider())) {
+			return cachedProjects.get().stream()
+					.filter(p -> p.getGitlabRepos().stream().anyMatch(re -> re.getUrl().equals(repoUrl)))
+					.collect(Collectors.toList());
+		} else if (ProviderType.GITHUB.equals(req.getProvider())) {
+			return cachedProjects.get().stream()
+					.filter(p -> p.getGithubRepos().stream().anyMatch(re -> re.getUrl().equals(repoUrl)))
+					.collect(Collectors.toList());
+		} else {
+			return cachedProjects.get().stream()
+					.filter(p -> p.getRepos().stream().anyMatch(re -> re.getUrl().equals(repoUrl)))
+					.collect(Collectors.toList());
+		}
 	}
 
 	/**

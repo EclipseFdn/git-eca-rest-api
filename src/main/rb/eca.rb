@@ -51,7 +51,7 @@ json_data = {
   :commits => processed_git_data
 }
 ## Generate request
-response = HTTParty.post("http://172.21.0.1:8083/git/eca", :body => MultiJson.dump(json_data), :headers => { 'Content-Type' => 'application/json' })
+response = HTTParty.post("https://api.eclipse.org/git/eca", :body => MultiJson.dump(json_data), :headers => { 'Content-Type' => 'application/json' })
 ## convert request to hash map
 parsed_response = MultiJson.load(response.body)
 

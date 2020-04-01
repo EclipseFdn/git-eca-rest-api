@@ -30,11 +30,15 @@ public class Project {
 	private String name;
 	private List<User> committers;
 	private List<Repo> repos;
+	private List<Repo> gitlabRepos;
+	private List<Repo> githubRepos;
 	private String specWorkingGroup;
 	
 	public Project() {
 		this.committers = new ArrayList<>();
 		this.repos = new ArrayList<>();
+		this.gitlabRepos = new ArrayList<>();
+		this.githubRepos = new ArrayList<>();
 	}
 
 	/**
@@ -83,14 +87,42 @@ public class Project {
 	 * @return the repos
 	 */
 	public List<Repo> getRepos() {
-		return repos;
+		return new ArrayList<>(repos);
 	}
 
 	/**
 	 * @param repos the repos to set
 	 */
 	public void setRepos(List<Repo> repos) {
-		this.repos = repos;
+		this.repos = new ArrayList<>(repos);
+	}
+
+	/**
+	 * @return the gitlabRepos
+	 */
+	public List<Repo> getGitlabRepos() {
+		return new ArrayList<>(gitlabRepos);
+	}
+
+	/**
+	 * @param githubRepos the githubRepos to set
+	 */
+	public void setGithubRepos(List<Repo> githubRepos) {
+		this.githubRepos = new ArrayList<>(githubRepos);
+	}
+
+	/**
+	 * @return the gitlabRepos
+	 */
+	public List<Repo> getGithubRepos() {
+		return new ArrayList<>(githubRepos);
+	}
+
+	/**
+	 * @param gitlabRepos the gitlabRepos to set
+	 */
+	public void setGitlabRepos(List<Repo> gitlabRepos) {
+		this.gitlabRepos = new ArrayList<>(gitlabRepos);
 	}
 
 	/**

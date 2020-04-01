@@ -58,7 +58,7 @@ public class MockProjectsAPI implements ProjectsAPI {
 		p1.setName("Sample project");
 		p1.setProjectId("sample.proj");
 		p1.setSpecWorkingGroup(null);
-		p1.setRepos(Arrays.asList(r1, r2));
+		p1.setGithubRepos(Arrays.asList(r1, r2));
 		p1.setCommitters(Arrays.asList(u1, u2));
 		src.add(p1);
 
@@ -66,7 +66,7 @@ public class MockProjectsAPI implements ProjectsAPI {
 		p2.setName("Prototype thing");
 		p2.setProjectId("sample.proto");
 		p2.setSpecWorkingGroup(null);
-		p2.setRepos(Arrays.asList(r3));
+		p2.setGithubRepos(Arrays.asList(r3));
 		p2.setCommitters(Arrays.asList(u2));
 		src.add(p2);
 
@@ -74,7 +74,7 @@ public class MockProjectsAPI implements ProjectsAPI {
 		p3.setName("Spec project");
 		p3.setProjectId("spec.proj");
 		p3.setSpecWorkingGroup("proj1");
-		p3.setRepos(Arrays.asList(r4));
+		p3.setGithubRepos(Arrays.asList(r4));
 		p3.setCommitters(Arrays.asList(u1, u2));
 		src.add(p3);
 	}
