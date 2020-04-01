@@ -28,7 +28,9 @@ spec:
           requests:
             cpu: 100m
             memory: 512Mi
-        args: ["-Dconfig.secret.path=/run/secrets/git-eca-rest-api/secret.properties"]
+        env: 
+        - name: CONFIG_SECRET_PATH
+          value: "/run/secrets/git-eca-rest-api/secret.properties"
         volumeMounts:
         - name: api-oauth-token
           mountPath: "/run/secrets/git-eca-rest-api"

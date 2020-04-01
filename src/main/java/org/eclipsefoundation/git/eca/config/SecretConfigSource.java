@@ -34,9 +34,9 @@ import org.slf4j.LoggerFactory;
  */
 public class SecretConfigSource implements ConfigSource {
 	private static final Logger LOGGER = LoggerFactory.getLogger(SecretConfigSource.class);
-	
+
 	private static final String DEFAULT_SECRET_LOCATION = "/run/secrets/secret.properties";
-	
+
 	private Map<String, String> secrets;
 
 	@Override
@@ -46,10 +46,12 @@ public class SecretConfigSource implements ConfigSource {
 			String secretPath = System.getProperty("config.secret.path");
 			// Fallback to checking env if not set in JVM
 			if (secretPath == null || "".equals(secretPath.trim())) {
-				secretPath = System.getenv("config.secret.path");
+				secretPath = System.getenv("CONFIG_SECRET_PATH");
 			}
 			if (secretPath == null || "".equals(secretPath.trim())) {
-				LOGGER.error("Configuration 'config.secret.path' not set, using default value of " + DEFAULT_SECRET_LOCATION);
+				LOGGER.error(
+						"Configuration 'config.secret.path' and environment variable of 'CONFIG_SECRET_PATH' not set, using default value of "
+								+ DEFAULT_SECRET_LOCATION);
 				secretPath = DEFAULT_SECRET_LOCATION;
 			}
 			// load the secrets file in
