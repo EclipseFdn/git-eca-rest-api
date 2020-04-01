@@ -15,7 +15,7 @@
 #
 ###
 FROM fabric8/java-alpine-openjdk8-jre:1.6.5
-ENV JAVA_OPTIONS="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager -Dconfig.secret.path=/run/secrets/git-eca-rest-api/secret.properties"
+ENV JAVA_OPTIONS="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
 ENV AB_ENABLED=jmx_exporter
 
 # Be prepared for running in OpenShift too
