@@ -12,6 +12,8 @@ package org.eclipsefoundation.git.eca.resource;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.is;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -39,7 +41,7 @@ import io.restassured.http.ContentType;
 public class ValidationResourceTest {
 
 	@Test
-	public void validate() {
+	void validate() throws MalformedURLException {
 		// set up test users
 		GitUser g1 = new GitUser();
 		g1.setName("The Wizard");
@@ -58,7 +60,7 @@ public class ValidationResourceTest {
 		
 		ValidationRequest vr = new ValidationRequest();
 		vr.setProvider(ProviderType.GITHUB);
-		vr.setRepoUrl("http://www.github.com/eclipsefdn/sample");
+		vr.setRepoUrl(new URL("http://www.github.com/eclipsefdn/sample"));
 		vr.setCommits(commits);
 		
 		// test output w/ assertions
@@ -73,7 +75,7 @@ public class ValidationResourceTest {
 	}
 
 	@Test
-	public void validateMultipleCommits() {
+	void validateMultipleCommits() throws MalformedURLException {
 		// set up test users
 		GitUser g1 = new GitUser();
 		g1.setName("The Wizard");
@@ -106,7 +108,7 @@ public class ValidationResourceTest {
 		
 		ValidationRequest vr = new ValidationRequest();
 		vr.setProvider(ProviderType.GITHUB);
-		vr.setRepoUrl("http://www.github.com/eclipsefdn/sample");
+		vr.setRepoUrl(new URL("http://www.github.com/eclipsefdn/sample"));
 		vr.setCommits(commits);
 		
 		// test output w/ assertions
@@ -121,7 +123,7 @@ public class ValidationResourceTest {
 	}
 	
 	@Test
-	public void validateMergeCommit() {
+	void validateMergeCommit() throws MalformedURLException {
 		// set up test users
 		GitUser g1 = new GitUser();
 		g1.setName("Rando Calressian");
@@ -140,7 +142,7 @@ public class ValidationResourceTest {
 		
 		ValidationRequest vr = new ValidationRequest();
 		vr.setProvider(ProviderType.GITHUB);
-		vr.setRepoUrl("http://www.github.com/eclipsefdn/sample");
+		vr.setRepoUrl(new URL("http://www.github.com/eclipsefdn/sample"));
 		vr.setCommits(commits);
 		// test output w/ assertions
 		// No errors expected, should pass as only commit is a valid merge commit
@@ -155,7 +157,7 @@ public class ValidationResourceTest {
 	}
 	
 	@Test
-	public void validateCommitNoSignOffCommitter() {
+	void validateCommitNoSignOffCommitter() throws MalformedURLException {
 		// set up test users
 		GitUser g1 = new GitUser();
 		g1.setName("Grunts McGee");
@@ -174,7 +176,7 @@ public class ValidationResourceTest {
 		
 		ValidationRequest vr = new ValidationRequest();
 		vr.setProvider(ProviderType.GITHUB);
-		vr.setRepoUrl("http://www.github.com/eclipsefdn/prototype");
+		vr.setRepoUrl(new URL("http://www.github.com/eclipsefdn/prototype"));
 		vr.setCommits(commits);
 		
 		// test output w/ assertions
@@ -190,7 +192,7 @@ public class ValidationResourceTest {
 	}
 	
 	@Test
-	public void validateCommitNoSignOffNonCommitter() {
+	void validateCommitNoSignOffNonCommitter() throws MalformedURLException {
 		// set up test users
 		GitUser g1 = new GitUser();
 		g1.setName("The Wizard");
@@ -209,7 +211,7 @@ public class ValidationResourceTest {
 		
 		ValidationRequest vr = new ValidationRequest();
 		vr.setProvider(ProviderType.GITHUB);
-		vr.setRepoUrl("http://www.github.com/eclipsefdn/prototype");
+		vr.setRepoUrl(new URL("http://www.github.com/eclipsefdn/prototype"));
 		vr.setCommits(commits);
 		
 		// test output w/ assertions
@@ -227,7 +229,7 @@ public class ValidationResourceTest {
 	}
 	
 	@Test
-	public void validateCommitInvalidSignOff() {
+	void validateCommitInvalidSignOff() throws MalformedURLException {
 		// set up test users
 		GitUser g1 = new GitUser();
 		g1.setName("Barshall Blathers");
@@ -246,7 +248,7 @@ public class ValidationResourceTest {
 		
 		ValidationRequest vr = new ValidationRequest();
 		vr.setProvider(ProviderType.GITHUB);
-		vr.setRepoUrl("http://www.github.com/eclipsefdn/prototype");
+		vr.setRepoUrl(new URL("http://www.github.com/eclipsefdn/prototype"));
 		vr.setCommits(commits);
 		
 		// test output w/ assertions
@@ -264,7 +266,7 @@ public class ValidationResourceTest {
 	}
 
 	@Test
-	public void validateWorkingGroupSpecAccess() {
+	void validateWorkingGroupSpecAccess() throws MalformedURLException {
 		// set up test users
 		GitUser g1 = new GitUser();
 		g1.setName("The Wizard");
@@ -288,7 +290,7 @@ public class ValidationResourceTest {
 		
 		ValidationRequest vr = new ValidationRequest();
 		vr.setProvider(ProviderType.GITHUB);
-		vr.setRepoUrl("http://www.github.com/eclipsefdn/tck-proto");
+		vr.setRepoUrl(new URL("http://www.github.com/eclipsefdn/tck-proto"));
 		vr.setCommits(commits);
 		
 		// test output w/ assertions
@@ -316,7 +318,7 @@ public class ValidationResourceTest {
 		
 		vr = new ValidationRequest();
 		vr.setProvider(ProviderType.GITHUB);
-		vr.setRepoUrl("http://www.github.com/eclipsefdn/tck-proto");
+		vr.setRepoUrl(new URL("http://www.github.com/eclipsefdn/tck-proto"));
 		vr.setCommits(commits);
 
 		// test output w/ assertions
@@ -334,7 +336,7 @@ public class ValidationResourceTest {
 	}
 	
 	@Test
-	public void validateProxyCommitPush() {
+	void validateProxyCommitPush() throws MalformedURLException {
 		// set up test users
 		GitUser g1 = new GitUser();
 		g1.setName("The Wizard");
@@ -358,7 +360,7 @@ public class ValidationResourceTest {
 		
 		ValidationRequest vr = new ValidationRequest();
 		vr.setProvider(ProviderType.GITHUB);
-		vr.setRepoUrl("http://www.github.com/eclipsefdn/tck-proto");
+		vr.setRepoUrl(new URL("http://www.github.com/eclipsefdn/tck-proto"));
 		vr.setCommits(commits);
 		
 		// test output w/ assertions
@@ -386,7 +388,7 @@ public class ValidationResourceTest {
 		
 		vr = new ValidationRequest();
 		vr.setProvider(ProviderType.GITHUB);
-		vr.setRepoUrl("http://www.github.com/eclipsefdn/prototype");
+		vr.setRepoUrl(new URL("http://www.github.com/eclipsefdn/prototype"));
 		vr.setCommits(commits);
 
 		// test output w/ assertions
@@ -402,7 +404,7 @@ public class ValidationResourceTest {
 	}
 
 	@Test
-	public void validateNoECA() {
+	void validateNoECA() throws MalformedURLException {
 		// set up test users
 		GitUser g1 = new GitUser();
 		g1.setName("Newbie Anon");
@@ -421,7 +423,7 @@ public class ValidationResourceTest {
 		
 		ValidationRequest vr = new ValidationRequest();
 		vr.setProvider(ProviderType.GITHUB);
-		vr.setRepoUrl("http://www.github.com/eclipsefdn/sample");
+		vr.setRepoUrl(new URL("http://www.github.com/eclipsefdn/sample"));
 		vr.setCommits(commits);
 		// test output w/ assertions
 		// Error should be singular + that there's no ECA on file
@@ -437,7 +439,7 @@ public class ValidationResourceTest {
 	}
 	
 	@Test
-	public void validateAuthorNoEclipseAccount() {
+	void validateAuthorNoEclipseAccount() throws MalformedURLException {
 		// set up test users
 		GitUser g1 = new GitUser();
 		g1.setName("Rando Calressian");
@@ -460,7 +462,7 @@ public class ValidationResourceTest {
 		
 		ValidationRequest vr = new ValidationRequest();
 		vr.setProvider(ProviderType.GITHUB);
-		vr.setRepoUrl("http://www.github.com/eclipsefdn/sample");
+		vr.setRepoUrl(new URL("http://www.github.com/eclipsefdn/sample"));
 		vr.setCommits(commits);
 		// test output w/ assertions
 		// Error should be singular + that there's no Eclipse Account on file for author
@@ -476,7 +478,7 @@ public class ValidationResourceTest {
 	}
 	
 	@Test
-	public void validateCommitterNoEclipseAccount() {
+	void validateCommitterNoEclipseAccount() throws MalformedURLException {
 		// set up test users
 		GitUser g1 = new GitUser();
 		g1.setName("Rando Calressian");
@@ -499,7 +501,7 @@ public class ValidationResourceTest {
 		
 		ValidationRequest vr = new ValidationRequest();
 		vr.setProvider(ProviderType.GITHUB);
-		vr.setRepoUrl("http://www.github.com/eclipsefdn/sample");
+		vr.setRepoUrl(new URL("http://www.github.com/eclipsefdn/sample"));
 		vr.setCommits(commits);
 		// test output w/ assertions
 		// Error should be singular + that there's no Eclipse Account on file for committer

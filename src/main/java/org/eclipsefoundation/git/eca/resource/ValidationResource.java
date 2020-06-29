@@ -9,6 +9,7 @@
  ******************************************************************************/
 package org.eclipsefoundation.git.eca.resource;
 
+import java.net.MalformedURLException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -72,7 +73,7 @@ public class ValidationResource {
 	CachingService cache;
 	@Inject
 	ProjectsService projects;
-	
+
 	/**
 	 * Consuming a JSON request, this method will validate all passed commits, using
 	 * the repo URL and the repository provider. These commits will be validated to
@@ -84,6 +85,7 @@ public class ValidationResource {
 	 * @return a web response indicating success or failure for each commit, along
 	 *         with standard messages that may be used to give users context on
 	 *         failure.
+	 * @throws MalformedURLException
 	 */
 	@POST
 	public Response validate(ValidationRequest req) {
@@ -100,12 +102,17 @@ public class ValidationResource {
 		if (req.getProvider() == null) {
 			addError(r, "A provider needs to be set to validate a request", null);
 		}
-
 		// only process if we have no errors
 		if (r.getErrorCount() == 0) {
+			LOGGER.debug("Processing: {}", req);
+			// filter the projects based on the repo URL. At least one repo in project must
+			// match the repo URL to be valid
+			List<Project> filteredProjects = retrieveProjectsForRequest(req);
+			// set whether this call has tracked projects
+			r.setTrackedProject(!filteredProjects.isEmpty());
 			for (Commit c : req.getCommits()) {
 				// process the request, capturing if we should continue processing
-				boolean continueProcessing = processCommit(c, r, req);
+				boolean continueProcessing = processCommit(c, r, filteredProjects);
 				// if there is a reason to stop processing, break the loop
 				if (!continueProcessing) {
 					break;
@@ -124,12 +131,12 @@ public class ValidationResource {
 	 * author and committers Eclipse Account is retrieved, which are then used to
 	 * check if the current commit is valid for the current project.
 	 * 
-	 * @param c        the commit to process
-	 * @param response the response container
-	 * @param request  the current validation request
+	 * @param c                the commit to process
+	 * @param response         the response container
+	 * @param filteredProjects tracked projects for the current request
 	 * @return true if we should continue processing, false otherwise.
 	 */
-	private boolean processCommit(Commit c, ValidationResponse response, ValidationRequest request) {
+	private boolean processCommit(Commit c, ValidationResponse response, List<Project> filteredProjects) {
 		// ensure the commit is valid, and has required fields
 		if (!CommitHelper.validateCommit(c)) {
 			addError(response, "One or more commits were invalid. Please check the payload and try again", c.getHash());
@@ -173,10 +180,11 @@ public class ValidationResource {
 			return true;
 		}
 		// validate author access to the current repo
-		validateAuthorAccess(response, c, eclipseAuthor, request);
+		validateAuthorAccess(response, c, eclipseAuthor, filteredProjects);
 
 		// only committers can push on behalf of other users
-		if (!eclipseAuthor.equals(eclipseCommitter) && !isCommitter(response, eclipseCommitter, c.getHash(), request)) {
+		if (!eclipseAuthor.equals(eclipseCommitter)
+				&& !isCommitter(response, eclipseCommitter, c.getHash(), filteredProjects)) {
 			addMessage(response, "You are not a project committer.", c.getHash());
 			addMessage(response, "Only project committers can push on behalf of others.", c.getHash());
 			addError(response, "You must be a committer to push on behalf of others.", c.getHash());
@@ -189,17 +197,15 @@ public class ValidationResource {
 	 * recorded in the response for the current request to be returned once all
 	 * validation checks are completed.
 	 * 
-	 * @param r             the current response object for the request
-	 * @param c             the commit that is being validated
-	 * @param eclipseAuthor the user to validate on a branch
-	 * @param repoUrl       repo URL for the current commit set, to be used when
-	 *                      checking projects
+	 * @param r                the current response object for the request
+	 * @param c                the commit that is being validated
+	 * @param eclipseAuthor    the user to validate on a branch
+	 * @param filteredProjects tracked projects for the current request
 	 */
 	private void validateAuthorAccess(ValidationResponse r, Commit c, EclipseUser eclipseAuthor,
-			ValidationRequest req) {
-
+			List<Project> filteredProjects) {
 		// check if the author matches to an eclipse user and is a committer
-		if (isCommitter(r, eclipseAuthor, c.getHash(), req)) {
+		if (isCommitter(r, eclipseAuthor, c.getHash(), filteredProjects)) {
 			addMessage(r, "The author is a committer on the project.", c.getHash());
 		} else {
 			addMessage(r, "The author is not a committer on the project.", c.getHash());
@@ -212,6 +218,7 @@ public class ValidationResource {
 								+ "If there are multiple Typecommits, please ensure that each author has a ECA.",
 						c.getHash());
 				addError(r, "An Eclipse Contributor Agreement is required.", c.getHash());
+
 			}
 
 			// retrieve the email of the Signed-off-by footer
@@ -225,6 +232,7 @@ public class ValidationResource {
 						c.getHash());
 				addError(r, "The contributor must \"sign-off\" on the contribution.", c.getHash(),
 						APIStatusCode.ERROR_SIGN_OFF);
+
 			}
 		}
 	}
@@ -238,18 +246,13 @@ public class ValidationResource {
 	 * the given project. If they match for the given project, they are granted
 	 * committer-like access to the repository.
 	 * 
-	 * @param r       the current response object for the request
-	 * @param user    the user to validate on a branch
-	 * @param hash    the hash of the commit that is being validated
-	 * @param repoUrl repo URL for the current commit set, to be used when checking
-	 *                projects
+	 * @param r                the current response object for the request
+	 * @param user             the user to validate on a branch
+	 * @param hash             the hash of the commit that is being validated
+	 * @param filteredProjects tracked projects for the current request
 	 * @return true if user is considered a committer, false otherwise.
 	 */
-	private boolean isCommitter(ValidationResponse r, EclipseUser user, String hash, ValidationRequest req) {
-		// filter the projects based on the repo URL. At least one repo in project must
-		// match the repo URL to be valid
-		List<Project> filteredProjects = retrieveProjectsForRequest(req);
-
+	private boolean isCommitter(ValidationResponse r, EclipseUser user, String hash, List<Project> filteredProjects) {
 		// iterate over filtered projects
 		for (Project p : filteredProjects) {
 			LOGGER.debug("Checking project '{}' for user '{}'", p.getName(), user.getName());
@@ -301,27 +304,27 @@ public class ValidationResource {
 	 *         if none found.
 	 */
 	private List<Project> retrieveProjectsForRequest(ValidationRequest req) {
-		String repoUrl = req.getRepoUrl();
+		String repoUrl = req.getRepoUrl().getPath();
 		// check for all projects that make use of the given repo
 		List<Project> availableProjects = projects.getProjects();
 		if (availableProjects == null || availableProjects.isEmpty()) {
 			return Collections.emptyList();
 		}
-		LOGGER.debug("Number of projects found: {}", availableProjects.size());
+		LOGGER.debug("Checking projects for repos that end with: {}", repoUrl);
 
 		// filter the projects based on the repo URL. At least one repo in project must
 		// match the repo URL to be valid
 		if (ProviderType.GITLAB.equals(req.getProvider())) {
 			return availableProjects.stream()
-					.filter(p -> p.getGitlabRepos().stream().anyMatch(re -> re.getUrl().equals(repoUrl)))
+					.filter(p -> p.getGitlabRepos().stream().anyMatch(re -> re.getUrl().endsWith(repoUrl)))
 					.collect(Collectors.toList());
 		} else if (ProviderType.GITHUB.equals(req.getProvider())) {
 			return availableProjects.stream()
-					.filter(p -> p.getGithubRepos().stream().anyMatch(re -> re.getUrl().equals(repoUrl)))
+					.filter(p -> p.getGithubRepos().stream().anyMatch(re -> re.getUrl().endsWith(repoUrl)))
 					.collect(Collectors.toList());
 		} else {
 			return availableProjects.stream()
-					.filter(p -> p.getRepos().stream().anyMatch(re -> re.getUrl().equals(repoUrl)))
+					.filter(p -> p.getRepos().stream().anyMatch(re -> re.getUrl().endsWith(repoUrl)))
 					.collect(Collectors.toList());
 		}
 	}
@@ -377,6 +380,11 @@ public class ValidationResource {
 
 	private void addError(ValidationResponse r, String message, String hash, APIStatusCode code) {
 		LOGGER.error(message);
-		r.addError(hash, message, code);
+		// only add as strict error for tracked projects
+		if (r.isTrackedProject()) {
+			r.addError(hash, message, code);
+		} else {
+			r.addWarning(hash, message, code);
+		}
 	}
 }

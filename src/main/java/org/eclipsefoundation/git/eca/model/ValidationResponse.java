@@ -29,6 +29,7 @@ public class ValidationResponse {
 	private int errorCount;
 	private Date time;
 	private Map<String, CommitStatus> commits;
+	private boolean trackedProject;
 
 	public ValidationResponse() {
 		this.commits = new HashMap<>();
@@ -100,10 +101,31 @@ public class ValidationResponse {
 	}
 
 	/**
+	 * @param warning message to add to the API response
+	 */
+	public void addWarning(String hash, String warning, APIStatusCode code) {
+		commits.computeIfAbsent(getHashKey(hash), k -> new CommitStatus()).addWarning(warning, code);
+	}
+
+	/**
 	 * @param error message to add to the API response
 	 */
 	public void addError(String hash, String error, APIStatusCode code) {
 		commits.computeIfAbsent(getHashKey(hash), k -> new CommitStatus()).addError(error, code);
+	}
+
+	/**
+	 * @return the trackedProject
+	 */
+	public boolean isTrackedProject() {
+		return trackedProject;
+	}
+
+	/**
+	 * @param trackedProject the trackedProject to set
+	 */
+	public void setTrackedProject(boolean trackedProject) {
+		this.trackedProject = trackedProject;
 	}
 
 	private String getHashKey(String hash) {

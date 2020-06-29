@@ -124,4 +124,26 @@ public class Commit {
 	public void setHead(boolean head) {
 		this.head = head;
 	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("Commit [hash=");
+		builder.append(hash);
+		builder.append(", subject=");
+		builder.append(subject);
+		builder.append(", body=");
+		builder.append(body);
+		builder.append(", parents=");
+		builder.append(parents);
+		builder.append(", author=");
+		builder.append(author);
+		builder.append(", committer=");
+		builder.append(committer);
+		builder.append(", head=");
+		builder.append(head);
+		builder.append("]");
+		return builder.toString();
+	}
+	
 }

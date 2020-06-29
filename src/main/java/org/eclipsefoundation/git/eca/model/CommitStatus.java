@@ -23,10 +23,12 @@ import org.eclipsefoundation.git.eca.namespace.APIStatusCode;
  */
 public class CommitStatus {
 	private List<CommitStatusMessage> messages;
+	private List<CommitStatusMessage> warnings;
 	private List<CommitStatusMessage> errors;
 
 	public CommitStatus() {
 		this.messages = new ArrayList<>();
+		this.warnings = new ArrayList<>();
 		this.errors = new ArrayList<>();
 	}
 
@@ -50,6 +52,28 @@ public class CommitStatus {
 	 */
 	public void addMessage(String message, APIStatusCode code) {
 		this.messages.add(new CommitStatusMessage(code, message));
+	}
+
+	/**
+	 * @return the warnings
+	 */
+	public List<CommitStatusMessage> getWarnings() {
+		return new ArrayList<>(warnings);
+	}
+
+	/**
+	 * @param warnings the warnings to set
+	 */
+	public void setWarnings(List<CommitStatusMessage> warnings) {
+		this.warnings = new ArrayList<>(warnings);
+	}
+
+	/**
+	 * @param warning warning to add to current commit status
+	 * @param code    the status code for the message
+	 */
+	public void addWarning(String warning, APIStatusCode code) {
+		this.warnings.add(new CommitStatusMessage(code, warning));
 	}
 
 	/**

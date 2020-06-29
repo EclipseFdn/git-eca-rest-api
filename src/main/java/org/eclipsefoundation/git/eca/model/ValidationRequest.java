@@ -9,6 +9,7 @@
  ******************************************************************************/
 package org.eclipsefoundation.git.eca.model;
 
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,21 +22,21 @@ import org.eclipsefoundation.git.eca.namespace.ProviderType;
  *
  */
 public class ValidationRequest {
-	private String repoUrl;
+	private URL repoUrl;
 	private List<Commit> commits;
 	private ProviderType provider;
 
 	/**
 	 * @return the repoUrl
 	 */
-	public String getRepoUrl() {
+	public URL getRepoUrl() {
 		return repoUrl;
 	}
 
 	/**
 	 * @param repoUrl the repoUrl to set
 	 */
-	public void setRepoUrl(String repoUrl) {
+	public void setRepoUrl(URL repoUrl) {
 		this.repoUrl = repoUrl;
 	}
 
@@ -66,4 +67,18 @@ public class ValidationRequest {
 	public void setProvider(ProviderType provider) {
 		this.provider = provider;
 	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("ValidationRequest [repoUrl=");
+		builder.append(repoUrl);
+		builder.append(", commits=");
+		builder.append(commits);
+		builder.append(", provider=");
+		builder.append(provider);
+		builder.append("]");
+		return builder.toString();
+	}
+	
 }
