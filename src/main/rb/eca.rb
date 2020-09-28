@@ -5,15 +5,6 @@ require 'json'
 require 'httparty'
 require 'multi_json'
 
-# Function to escape unwanted characters from messages
-def escape(val) 
-  if (val.empty?)
-    return val
-  end
-  return val.gsub(/(?<!~)"/, '&quot;').gsub(/~"/, '"')
-end
-
-
 ## read in the access token from secret file
 if (!File.file?("/etc/gitlab/eca-access-token"))
   puts "GL-HOOK-ERR: Internal server error, please contact administrator. Error, secret not found" 
@@ -54,11 +45,21 @@ git_commits.each do |commit|
   ## Get parents separately to post-process string into array format
   commit_parents_raw = `git show -s --format='%P' #{commit}`
   commit_parents = commit_parents_raw.split(/\s/)
-  ## Process Git data into JSON for each commit found
-  git_data = `git show -s --format='{~"author~": {~"name~":~"%an~",~"mail~":~"%ae~"},~"committer~":{~"name~":~"%cn~",~"mail~":~"%ce~"},~"body~":~"%B~",~"subject~":~"%s~",~"hash~":~"%H~", ~"parents~":[~"#{commit_parents.join("\", \"")}~"]}' #{commit}`
-  ## Strip new lines as they FUBAR JSON parsers
-  git_data = escape(git_data.force_encoding("utf-8")).gsub(/[\n\r\t]/, ' ')
-  processed_git_data.push(MultiJson.load(git_data.force_encoding("utf-8")))
+  git_commit = {
+    :author => {
+      :name => `git show -s --format='%an' #{commit}`.force_encoding("utf-8"),
+      :mail => `git show -s --format='%ae' #{commit}`.force_encoding("utf-8"),
+    },
+    :committer => {
+      :name => `git show -s --format='%cn' #{commit}`.force_encoding("utf-8"),
+      :mail => `git show -s --format='%ce' #{commit}`.force_encoding("utf-8"),
+    },
+    :body => `git show -s --format='%B' #{commit}`.force_encoding("utf-8"),
+    :subject => `git show -s --format='%s' #{commit}`.force_encoding("utf-8"),
+    :hash => `git show -s --format='%H' #{commit}`,
+    :parents => commit_parents
+  }
+  processed_git_data.push(git_commit)
 end
 
 ## Get the project ID from env var, extracting from pattern 'project-###'
