@@ -5,6 +5,15 @@ require 'json'
 require 'httparty'
 require 'multi_json'
 
+# Function to escape unwanted characters from messages
+def escape(val) 
+  if (val.empty?)
+    return val
+  end
+  return val.gsub(/(?<!~)"/, '&quot;').gsub(/~"/, '"')
+end
+
+
 ## read in the access token from secret file
 if (!File.file?("/etc/gitlab/eca-access-token"))
   puts "GL-HOOK-ERR: Internal server error, please contact administrator. Error, secret not found" 
@@ -46,9 +55,9 @@ git_commits.each do |commit|
   commit_parents_raw = `git show -s --format='%P' #{commit}`
   commit_parents = commit_parents_raw.split(/\s/)
   ## Process Git data into JSON for each commit found
-  git_data = `git show -s --format='{"author": {"name":"%an","mail":"%ae"},"committer":{"name":"%cn","mail":"%ce"},"body":"%B","subject":"%s","hash":"%H", "parents":["#{commit_parents.join("\", \"")}"]}' #{commit}`
+  git_data = `git show -s --format='{~"author~": {~"name~":~"%an~",~"mail~":~"%ae~"},~"committer~":{~"name~":~"%cn~",~"mail~":~"%ce~"},~"body~":~"%B~",~"subject~":~"%s~",~"hash~":~"%H~", ~"parents~":[~"#{commit_parents.join("\", \"")}~"]}' #{commit}`
   ## Strip new lines as they FUBAR JSON parsers
-  git_data = git_data.force_encoding("utf-8").gsub(/[\n\r\t]/, ' ')
+  git_data = escape(git_data.force_encoding("utf-8")).gsub(/[\n\r\t]/, ' ')
   processed_git_data.push(MultiJson.load(git_data.force_encoding("utf-8")))
 end
 
