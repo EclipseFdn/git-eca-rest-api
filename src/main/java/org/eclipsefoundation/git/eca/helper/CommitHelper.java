@@ -21,7 +21,7 @@ import org.eclipsefoundation.git.eca.model.Commit;
  *
  */
 public class CommitHelper {
-	private static final Pattern SIGNED_OFF_BY_FOOTER = Pattern.compile("Signed-off-by:(.*)<(.*@.*)>\\s*$");
+	private static final Pattern SIGNED_OFF_BY_FOOTER = Pattern.compile("Signed-off-by:(.*)<(.*@.*)>");
 
 	/**
 	 * Validate the commits fields.
