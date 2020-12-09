@@ -264,6 +264,73 @@ class ValidationResourceTest {
 							"commits.123456789abcdefghijklmnop.errors[0].code", 
 							is(APIStatusCode.ERROR_SIGN_OFF.getValue()));
 	}
+	@Test
+	void validateCommitSignOffMultipleFooterLines_Last() throws URISyntaxException {
+		// set up test users
+		GitUser g1 = new GitUser();
+		g1.setName("Barshall Blathers");
+		g1.setMail("slom@eclipse-foundation.org");
+
+		List<Commit> commits = new ArrayList<>();
+		// create sample commits
+		Commit c1 = new Commit();
+		c1.setAuthor(g1);
+		c1.setCommitter(g1);
+		c1.setBody(String.format("Change-Id: 0000000000000001\nSigned-off-by: %s <%s>", g1.getName(), g1.getMail()));
+		c1.setHash("123456789abcdefghijklmnop");
+		c1.setSubject("All of the things");
+		c1.setParents(Collections.emptyList());
+		commits.add(c1);
+		
+		ValidationRequest vr = new ValidationRequest();
+		vr.setProvider(ProviderType.GITHUB);
+		vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/prototype"));
+		vr.setCommits(commits);
+		
+		// test output w/ assertions
+		given()
+			.body(vr)
+			.contentType(ContentType.JSON)
+				.when().post("/eca")
+				.then()
+					.statusCode(200)
+					.body("passed", is(true),
+							"errorCount", is(0));
+	}
+
+	@Test
+	void validateCommitSignOffMultipleFooterLines_First() throws URISyntaxException {
+		// set up test users
+		GitUser g1 = new GitUser();
+		g1.setName("Barshall Blathers");
+		g1.setMail("slom@eclipse-foundation.org");
+
+		List<Commit> commits = new ArrayList<>();
+		// create sample commits
+		Commit c1 = new Commit();
+		c1.setAuthor(g1);
+		c1.setCommitter(g1);
+		c1.setBody(String.format("Signed-off-by: %s <%s>\nChange-Id: 0000000000000001", g1.getName(), g1.getMail()));
+		c1.setHash("123456789abcdefghijklmnop");
+		c1.setSubject("All of the things");
+		c1.setParents(Collections.emptyList());
+		commits.add(c1);
+		
+		ValidationRequest vr = new ValidationRequest();
+		vr.setProvider(ProviderType.GITHUB);
+		vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/prototype"));
+		vr.setCommits(commits);
+		
+		// test output w/ assertions
+		given()
+			.body(vr)
+			.contentType(ContentType.JSON)
+				.when().post("/eca")
+				.then()
+					.statusCode(200)
+					.body("passed", is(true),
+							"errorCount", is(0));
+	}
 
 	@Test
 	void validateWorkingGroupSpecAccess() throws URISyntaxException {
