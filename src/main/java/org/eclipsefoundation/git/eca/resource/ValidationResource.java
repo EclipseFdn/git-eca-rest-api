@@ -227,9 +227,8 @@ public class ValidationResource {
         addError(r, "An Eclipse Contributor Agreement is required.", c.getHash());
       }
 
-      // retrieve the email of the Signed-off-by footer
-      String signedOffBy = CommitHelper.getSignedOffByEmail(c);
-      if (signedOffBy != null && signedOffBy.equalsIgnoreCase(eclipseAuthor.getMail())) {
+      // check if one of the signed off by footer lines matches the author email.
+      if (CommitHelper.getSignedOffByEmail(c)) {
         addMessage(r, "The author has signed-off on the contribution.", c.getHash());
       } else {
         addMessage(

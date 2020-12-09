@@ -56,18 +56,20 @@ public class CommitHelper {
 	 * processing the body and parsing out the given footer knowing its format.
 	 *
 	 * @param c the commit to retrieve the signed off by footer for
-	 * @return the email address in the Signed-off-by footer, or null if none could
-	 *         be found.
+	 * @return true if an email address matching the authors was found in the signed-off by footer lines
 	 */
-	public static String getSignedOffByEmail(Commit c) {
+	public static boolean getSignedOffByEmail(Commit c) {
 		if (c == null) {
-			return null;
+			return false;
 		}
 		Matcher m = SIGNED_OFF_BY_FOOTER.matcher(c.getBody());
-		if (m.find()) {
-			return m.group(2);
+		while (m.find()) {
+			String signOffEmail = m.group(2);
+			if (signOffEmail != null && signOffEmail.equalsIgnoreCase(c.getAuthor().getMail())) {
+				return true;
+			}
 		}
-		return null;
+		return false;
 	}
 
 	private CommitHelper() {

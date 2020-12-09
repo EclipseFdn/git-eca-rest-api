@@ -26,14 +26,14 @@ import io.quarkus.test.junit.QuarkusTest;
  *
  */
 @QuarkusTest
-public class CommitHelperTest {
+class CommitHelperTest {
 
 	// represents a known good commit before the start of each test
 	GitUser testUser;
 	Commit baseCommit;
 
 	@BeforeEach
-	public void setup() {
+	void setup() {
 		// basic good user
 		testUser = new GitUser();
 		testUser.setMail("test.user@eclipse-foundation.org");
@@ -52,71 +52,84 @@ public class CommitHelperTest {
 	}
 
 	@Test
-	public void getSignedOffByEmailNullCommit() {
-		Assertions.assertNull(CommitHelper.getSignedOffByEmail(null), "Expected null return for null commit");
+	void getSignedOffByEmailNullCommit() {
+		Assertions.assertFalse(CommitHelper.getSignedOffByEmail(null), "Expected null return for null commit");
 	}
 
 	@Test
-	public void getSignedOffByEmailOnlyFooter() {
+	void getSignedOffByEmailOnlyFooter() {
 		baseCommit.setBody(String.format("Signed-off-by: %s <%s>", testUser.getName(), testUser.getMail()));
-		String actualMail = CommitHelper.getSignedOffByEmail(baseCommit);
-		Assertions.assertEquals(testUser.getMail(), actualMail);
+		boolean actual = CommitHelper.getSignedOffByEmail(baseCommit);
+		Assertions.assertTrue(actual);
+	}
+	@Test
+	void getSignedOffByEmailWithDifferentCasing() {
+		baseCommit.setBody(String.format("Signed-off-by: %s <%s>", testUser.getName(), testUser.getMail().toUpperCase()));
+		boolean actual = CommitHelper.getSignedOffByEmail(baseCommit);
+		Assertions.assertTrue(actual);
 	}
 
 	@Test
-	public void getSignedOffByEmailBodyAndFooter() {
+	void getSignedOffByEmailBodyAndFooter() {
 		baseCommit.setBody(
 				String.format("Sample body content\n\nSigned-off-by: %s <%s>", testUser.getName(), testUser.getMail()));
-		String actualMail = CommitHelper.getSignedOffByEmail(baseCommit);
-		Assertions.assertEquals(testUser.getMail(), actualMail);
+		boolean actualMail = CommitHelper.getSignedOffByEmail(baseCommit);
+		Assertions.assertTrue(actualMail);
 	}
 
 	@Test
-	public void getSignedOffByEmailNoNameFooter() {
+	void getSignedOffByEmailNoNameFooter() {
 		baseCommit.setBody(
 				String.format("Sample body content\n\nSigned-off-by:<%s>", testUser.getMail()));
-		String actualMail = CommitHelper.getSignedOffByEmail(baseCommit);
-		Assertions.assertEquals(testUser.getMail(), actualMail);
+		boolean actual = CommitHelper.getSignedOffByEmail(baseCommit);
+		Assertions.assertTrue(actual);
 	}
 
 	@Test
-	public void getSignedOffByEmailNoBrackets() {
+	void getSignedOffByEmailNoBrackets() {
 		baseCommit.setBody(
 				String.format("Sample body content\n\nSigned-off-by:%s", testUser.getMail()));
-		String actualMail = CommitHelper.getSignedOffByEmail(baseCommit);
-		Assertions.assertNull(actualMail);
+		boolean actual = CommitHelper.getSignedOffByEmail(baseCommit);
+		Assertions.assertFalse(actual);
 	}
 
 	@Test
-	public void getSignedOffByEmailBadFooterName() {
+	void getSignedOffByEmailBadFooterName() {
 		baseCommit.setBody(
 				String.format("Sample body content\n\nSign-off-by: %s <%s>", testUser.getName(), testUser.getMail()));
-		Assertions.assertNull(CommitHelper.getSignedOffByEmail(baseCommit), "Expected no result with typo in footer name");
+		Assertions.assertFalse(CommitHelper.getSignedOffByEmail(baseCommit), "Expected false with typo in footer name");
 		
 		baseCommit.setBody(
 				String.format("Sample body content\n\nSIGNED-OFF-BY: %s <%s>", testUser.getName(), testUser.getMail()));
-		Assertions.assertNull(CommitHelper.getSignedOffByEmail(baseCommit), "Expected no result with bad casing");
+		Assertions.assertFalse(CommitHelper.getSignedOffByEmail(baseCommit), "Expected false with bad casing");
 	}
 
 	@Test
-	public void validateCommitKnownGood() {
+	void getSignedOffByEmailBadAuthorEmail() {
+		baseCommit.setBody(
+				String.format("Sample body content\n\nSigned-off-by: %s <%s>", testUser.getName(), "known_bad@email.org"));
+		Assertions.assertFalse(CommitHelper.getSignedOffByEmail(baseCommit), "Expected false with typo in footer name");
+	}
+
+	@Test
+	void validateCommitKnownGood() {
 		Assertions.assertTrue(CommitHelper.validateCommit(baseCommit), "Expected basic commit to pass validation");
 	}
 	
 	@Test
-	public void validateCommitNullCommit() {
+	void validateCommitNullCommit() {
 		Assertions.assertFalse(CommitHelper.validateCommit(null), "Expected null commit to fail validation");
 	}
 
 	@Test
-	public void validateCommitNoAuthor() {
+	void validateCommitNoAuthor() {
 		baseCommit.setAuthor(null);
 		Assertions.assertFalse(CommitHelper.validateCommit(baseCommit),
 				"Expected basic commit to fail validation w/ no author");
 	}
 
 	@Test
-	public void validateCommitNoAuthorMail() {
+	void validateCommitNoAuthorMail() {
 		GitUser noMail = new GitUser();
 		noMail.setName("Some Name");
 
@@ -126,14 +139,14 @@ public class CommitHelperTest {
 	}
 
 	@Test
-	public void validateCommitNoCommitter() {
+	void validateCommitNoCommitter() {
 		baseCommit.setCommitter(null);
 		Assertions.assertFalse(CommitHelper.validateCommit(baseCommit),
 				"Expected basic commit to fail validation w/ no committer");
 	}
 
 	@Test
-	public void validateCommitNoCommitterMail() {
+	void validateCommitNoCommitterMail() {
 		GitUser noMail = new GitUser();
 		noMail.setName("Some Name");
 
@@ -143,28 +156,28 @@ public class CommitHelperTest {
 	}
 
 	@Test
-	public void validateCommitNoHash() {
+	void validateCommitNoHash() {
 		baseCommit.setHash(null);
 		Assertions.assertFalse(CommitHelper.validateCommit(baseCommit),
 				"Expected basic commit to fail validation w/ no commit hash");
 	}
 
 	@Test
-	public void validateCommitNoBody() {
+	void validateCommitNoBody() {
 		baseCommit.setBody(null);
 		Assertions.assertTrue(CommitHelper.validateCommit(baseCommit),
 				"Expected basic commit to pass validation w/ no body");
 	}
 
 	@Test
-	public void validateCommitNoParents() {
+	void validateCommitNoParents() {
 		baseCommit.setParents(new ArrayList<>());
 		Assertions.assertTrue(CommitHelper.validateCommit(baseCommit),
 				"Expected basic commit to pass validation w/ no parents");
 	}
 
 	@Test
-	public void validateCommitNoSubject() {
+	void validateCommitNoSubject() {
 		baseCommit.setSubject(null);
 		Assertions.assertTrue(CommitHelper.validateCommit(baseCommit),
 				"Expected basic commit to pass validation w/ no subject");
