@@ -41,9 +41,17 @@ public class MockProjectsAPI implements ProjectsAPI {
 		Repo r2 = new Repo();
 		r2.setUrl("http://www.github.com/eclipsefdn/test");
 		Repo r3 = new Repo();
-		r3.setUrl("http://www.github.com/eclipsefdn/prototype");
+		r3.setUrl("http://www.github.com/eclipsefdn/prototype.git");
 		Repo r4 = new Repo();
 		r4.setUrl("http://www.github.com/eclipsefdn/tck-proto");
+		Repo r5 = new Repo();
+		r5.setUrl("/gitroot/sample/gerrit.project.git");
+		Repo r6 = new Repo();
+		r6.setUrl("/gitroot/sample/gerrit.other-project");
+		Repo r7 = new Repo();
+		r7.setUrl("https://gitlab.eclipse.org/eclipse/dash/dash.git");
+		Repo r8 = new Repo();
+		r8.setUrl("https://gitlab.eclipse.org/eclipse/dash/dash.handbook.test");
 
 		// sample users, correlates to users in Mock projects API
 		User u1 = new User();
@@ -60,6 +68,7 @@ public class MockProjectsAPI implements ProjectsAPI {
 		p1.setProjectId("sample.proj");
 		p1.setSpecWorkingGroup(null);
 		p1.setGithubRepos(Arrays.asList(r1, r2));
+		p1.setGerritRepos(Arrays.asList(r5));
 		p1.setCommitters(Arrays.asList(u1, u2));
 		src.add(p1);
 
@@ -68,6 +77,8 @@ public class MockProjectsAPI implements ProjectsAPI {
 		p2.setProjectId("sample.proto");
 		p2.setSpecWorkingGroup(null);
 		p2.setGithubRepos(Arrays.asList(r3));
+		p1.setGerritRepos(Arrays.asList(r6));
+		p1.setGitlabRepos(Arrays.asList(r8));
 		p2.setCommitters(Arrays.asList(u2));
 		src.add(p2);
 
@@ -76,6 +87,7 @@ public class MockProjectsAPI implements ProjectsAPI {
 		p3.setProjectId("spec.proj");
 		p3.setSpecWorkingGroup("proj1");
 		p3.setGithubRepos(Arrays.asList(r4));
+		p1.setGitlabRepos(Arrays.asList(r7));
 		p3.setCommitters(Arrays.asList(u1, u2));
 		src.add(p3);
 	}
@@ -84,5 +96,4 @@ public class MockProjectsAPI implements ProjectsAPI {
 	public List<Project> getProject(int page, int pageSize) {
 		return page == 1 ? new ArrayList<>(src) : Collections.emptyList();
 	}
-
 }

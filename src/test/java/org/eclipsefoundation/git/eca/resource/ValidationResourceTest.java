@@ -212,7 +212,7 @@ class ValidationResourceTest {
 
     ValidationRequest vr = new ValidationRequest();
     vr.setProvider(ProviderType.GITHUB);
-    vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/prototype"));
+    vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/prototype.git"));
     vr.setCommits(commits);
 
     // test output w/ assertions
@@ -253,7 +253,7 @@ class ValidationResourceTest {
 
     ValidationRequest vr = new ValidationRequest();
     vr.setProvider(ProviderType.GITHUB);
-    vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/prototype"));
+    vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/prototype.git"));
     vr.setCommits(commits);
 
     // test output w/ assertions
@@ -482,7 +482,7 @@ class ValidationResourceTest {
 
     ValidationRequest vr = new ValidationRequest();
     vr.setProvider(ProviderType.GITHUB);
-    vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/tck-proto"));
+    vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/tck-proto.git"));
     vr.setCommits(commits);
 
     // test output w/ assertions
@@ -510,7 +510,7 @@ class ValidationResourceTest {
 
     vr = new ValidationRequest();
     vr.setProvider(ProviderType.GITHUB);
-    vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/prototype"));
+    vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/prototype.git"));
     vr.setCommits(commits);
 
     // test output w/ assertions
