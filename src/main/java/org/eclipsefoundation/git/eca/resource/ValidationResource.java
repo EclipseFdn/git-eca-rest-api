@@ -187,7 +187,7 @@ public class ValidationResource {
     validateAuthorAccess(response, c, eclipseAuthor, filteredProjects);
 
     // only committers can push on behalf of other users
-    if (!eclipseAuthor.equals(eclipseCommitter)
+    if (response.isTrackedProject() && !eclipseAuthor.equals(eclipseCommitter)
         && !isCommitter(response, eclipseCommitter, c.getHash(), filteredProjects)) {
       addMessage(response, "You are not a project committer.", c.getHash());
       addMessage(response, "Only project committers can push on behalf of others.", c.getHash());
