@@ -637,4 +637,42 @@ class ValidationResourceTest {
         .statusCode(403)
         .body("passed", is(false), "errorCount", is(1));
   }
+
+  @Test
+  void validateProxyCommitUntrackedProject() throws URISyntaxException {
+    // set up test users
+    GitUser g1 = new GitUser();
+    g1.setName("Rando Calressian");
+    g1.setMail("rando@nowhere.co");
+
+    GitUser g2 = new GitUser();
+    g2.setName("Grunts McGee");
+    g2.setMail("grunt@important.co");
+
+    List<Commit> commits = new ArrayList<>();
+    // create sample commits
+    Commit c1 = new Commit();
+    c1.setAuthor(g2);
+    c1.setCommitter(g1);
+    c1.setBody(String.format("Signed-off-by: %s <%s>", g2.getName(), g2.getMail()));
+    c1.setHash("123456789abcdefghijklmnop");
+    c1.setSubject("All of the things");
+    c1.setParents(Arrays.asList("46bb69bf6aa4ed26b2bf8c322ae05bef0bcc5c10"));
+    commits.add(c1);
+
+    ValidationRequest vr = new ValidationRequest();
+    vr.setProvider(ProviderType.GITHUB);
+    vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/sample-not-tracked"));
+    vr.setCommits(commits);
+    // test output w/ assertions
+    // Error should be singular + that there's no Eclipse Account on file for committer
+    // Status 403 (forbidden) is the standard return for invalid requests
+    given()
+        .body(vr)
+        .contentType(ContentType.JSON)
+        .when()
+        .post("/eca")
+        .then()
+        .statusCode(200);
+  }
 }
