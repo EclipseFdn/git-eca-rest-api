@@ -10,9 +10,7 @@ package org.eclipsefoundation.git.eca.resource;
 
 import java.net.MalformedURLException;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -29,6 +27,7 @@ import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.eclipsefoundation.git.eca.api.AccountsAPI;
 import org.eclipsefoundation.git.eca.api.BotsAPI;
 import org.eclipsefoundation.git.eca.helper.CommitHelper;
+import org.eclipsefoundation.git.eca.model.BotUser;
 import org.eclipsefoundation.git.eca.model.Commit;
 import org.eclipsefoundation.git.eca.model.EclipseUser;
 import org.eclipsefoundation.git.eca.model.GitUser;
@@ -43,395 +42,407 @@ import org.eclipsefoundation.git.eca.service.ProjectsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 /**
- * ECA validation endpoint for Git commits. Will use information from the bots, projects, and accounts API to validate
- * commits passed to this endpoint. Should be as system agnostic as possible to allow for any service to request
- * validation with less reliance on services external to the Eclipse foundation.
+ * ECA validation endpoint for Git commits. Will use information from the bots, projects, and
+ * accounts API to validate commits passed to this endpoint. Should be as system agnostic as
+ * possible to allow for any service to request validation with less reliance on services external
+ * to the Eclipse foundation.
  *
  * @author Martin Lowe
  */
 @Path("/eca")
-@Consumes({ MediaType.APPLICATION_JSON })
-@Produces({ MediaType.APPLICATION_JSON })
+@Consumes({MediaType.APPLICATION_JSON})
+@Produces({MediaType.APPLICATION_JSON})
 public class ValidationResource {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ValidationResource.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(ValidationResource.class);
 
-    // eclipse API rest client interfaces
-    @Inject
-    @RestClient
-    AccountsAPI accounts;
-    @Inject
-    @RestClient
-    BotsAPI bots;
+  // eclipse API rest client interfaces
+  @Inject @RestClient AccountsAPI accounts;
+  @Inject @RestClient BotsAPI bots;
 
-    // external API/service harnesses
-    @Inject
-    OAuthService oauth;
-    @Inject
-    CachingService cache;
-    @Inject
-    ProjectsService projects;
+  // external API/service harnesses
+  @Inject OAuthService oauth;
+  @Inject CachingService cache;
+  @Inject ProjectsService projects;
 
-    /**
-     * Consuming a JSON request, this method will validate all passed commits, using the repo URL and the repository
-     * provider. These commits will be validated to ensure that all users are covered either by an ECA, or are
-     * committers on the project. In the case of ECA-only contributors, an additional sign off footer is required in the
-     * body of the commit.
-     *
-     * @param req the request containing basic data plus the commits to be validated
-     * @return a web response indicating success or failure for each commit, along with standard messages that may be
-     * used to give users context on failure.
-     * @throws MalformedURLException
-     */
-    @POST
-    public Response validate(ValidationRequest req) {
-        ValidationResponse r = new ValidationResponse();
-        r.setStrictMode(req.isStrictMode());
-        // check that we have commits to validate
-        if (req.getCommits() == null || req.getCommits().isEmpty()) {
-            addError(r, "A commit is required to validate", null);
+  /**
+   * Consuming a JSON request, this method will validate all passed commits, using the repo URL and
+   * the repository provider. These commits will be validated to ensure that all users are covered
+   * either by an ECA, or are committers on the project. In the case of ECA-only contributors, an
+   * additional sign off footer is required in the body of the commit.
+   *
+   * @param req the request containing basic data plus the commits to be validated
+   * @return a web response indicating success or failure for each commit, along with standard
+   *     messages that may be used to give users context on failure.
+   * @throws MalformedURLException
+   */
+  @POST
+  public Response validate(ValidationRequest req) {
+    ValidationResponse r = new ValidationResponse();
+    r.setStrictMode(req.isStrictMode());
+    // check that we have commits to validate
+    if (req.getCommits() == null || req.getCommits().isEmpty()) {
+      addError(r, "A commit is required to validate", null);
+    }
+    // check that we have a repo set
+    if (req.getRepoUrl() == null) {
+      addError(r, "A base repo URL needs to be set in order to validate", null);
+    }
+    // check that we have a type set
+    if (req.getProvider() == null) {
+      addError(r, "A provider needs to be set to validate a request", null);
+    }
+    // only process if we have no errors
+    if (r.getErrorCount() == 0) {
+      LOGGER.debug("Processing: {}", req);
+      // filter the projects based on the repo URL. At least one repo in project must
+      // match the repo URL to be valid
+      List<Project> filteredProjects = retrieveProjectsForRequest(req);
+      // set whether this call has tracked projects
+      r.setTrackedProject(!filteredProjects.isEmpty());
+      for (Commit c : req.getCommits()) {
+        // process the request, capturing if we should continue processing
+        boolean continueProcessing = processCommit(c, r, filteredProjects, req.getProvider());
+        // if there is a reason to stop processing, break the loop
+        if (!continueProcessing) {
+          break;
         }
-        // check that we have a repo set
-        if (req.getRepoUrl() == null) {
-            addError(r, "A base repo URL needs to be set in order to validate", null);
-        }
-        // check that we have a type set
-        if (req.getProvider() == null) {
-            addError(r, "A provider needs to be set to validate a request", null);
-        }
-        // only process if we have no errors
-        if (r.getErrorCount() == 0) {
-            LOGGER.debug("Processing: {}", req);
-            // filter the projects based on the repo URL. At least one repo in project must
-            // match the repo URL to be valid
-            List<Project> filteredProjects = retrieveProjectsForRequest(req);
-            // set whether this call has tracked projects
-            r.setTrackedProject(!filteredProjects.isEmpty());
-            for (Commit c : req.getCommits()) {
-                // process the request, capturing if we should continue processing
-                boolean continueProcessing = processCommit(c, r, filteredProjects);
-                // if there is a reason to stop processing, break the loop
-                if (!continueProcessing) {
-                    break;
-                }
-            }
-        }
-        // depending on number of errors found, set response status
-        if (r.getErrorCount() == 0) {
-            r.setPassed(true);
-        }
-        return r.toResponse();
+      }
+    }
+    // depending on number of errors found, set response status
+    if (r.getErrorCount() == 0) {
+      r.setPassed(true);
+    }
+    return r.toResponse();
+  }
+
+  /**
+   * Process the current request, validating that the passed commit is valid. The author and
+   * committers Eclipse Account is retrieved, which are then used to check if the current commit is
+   * valid for the current project.
+   *
+   * @param c the commit to process
+   * @param response the response container
+   * @param filteredProjects tracked projects for the current request
+   * @return true if we should continue processing, false otherwise.
+   */
+  private boolean processCommit(
+      Commit c,
+      ValidationResponse response,
+      List<Project> filteredProjects,
+      ProviderType provider) {
+    // ensure the commit is valid, and has required fields
+    if (!CommitHelper.validateCommit(c)) {
+      addError(
+          response,
+          "One or more commits were invalid. Please check the payload and try again",
+          c.getHash());
+      return false;
+    }
+    // retrieve the author + committer for the current request
+    GitUser author = c.getAuthor();
+    GitUser committer = c.getCommitter();
+
+    addMessage(response, String.format("Reviewing commit: %1$s", c.getHash()), c.getHash());
+    addMessage(
+        response,
+        String.format("Authored by: %1$s <%2$s>", author.getName(), author.getMail()),
+        c.getHash());
+
+    // skip processing if a merge commit
+    if (c.getParents().size() > 1) {
+      addMessage(
+          response,
+          String.format(
+              "Commit '%1$s' has multiple parents, merge commit detected, passing", c.getHash()),
+          c.getHash());
+      return true;
     }
 
-    /**
-     * Process the current request, validating that the passed commit is valid. The author and committers Eclipse
-     * Account is retrieved, which are then used to check if the current commit is valid for the current project.
-     *
-     * @param c the commit to process
-     * @param response the response container
-     * @param filteredProjects tracked projects for the current request
-     * @return true if we should continue processing, false otherwise.
-     */
-    private boolean processCommit(Commit c, ValidationResponse response, List<Project> filteredProjects) {
-        // ensure the commit is valid, and has required fields
-        if (!CommitHelper.validateCommit(c)) {
-            addError(response, "One or more commits were invalid. Please check the payload and try again", c.getHash());
-            return false;
-        }
-        // retrieve the author + committer for the current request
-        GitUser author = c.getAuthor();
-        GitUser committer = c.getCommitter();
-
-        addMessage(response, String.format("Reviewing commit: %1$s", c.getHash()), c.getHash());
-        addMessage(response, String.format("Authored by: %1$s <%2$s>", author.getName(), author.getMail()),
-                c.getHash());
-
-        // skip processing if a merge commit
-        if (c.getParents().size() > 1) {
-            addMessage(response,
-                    String.format("Commit '%1$s' has multiple parents, merge commit detected, passing", c.getHash()),
-                    c.getHash());
-            return true;
-        }
-
-        // retrieve the eclipse account for the author
-        EclipseUser eclipseAuthor = getIdentifiedUser(author);
-        if (eclipseAuthor == null) {
-            // if the user is a bot, generate a stubbed user
-            if (!userIsABot(author.getMail(), filteredProjects)) {
-                addMessage(response,
-                        String.format("Could not find an Eclipse user with mail '%1$s' for author of commit %2$s",
-                                committer.getMail(), c.getHash()),
-                        c.getHash());
-                addError(response, "Author must have an Eclipse Account", c.getHash());
-                return true;
-            }
-            // set the Eclipse author as the basic committer w\ bot flag to pass information forward
-            eclipseAuthor = EclipseUser.createBotStub(author);
-        }
-
-        // retrieve the eclipse account for the committer
-        EclipseUser eclipseCommitter = getIdentifiedUser(committer);
-        if (eclipseCommitter == null) {
-            if (!userIsABot(committer.getMail(), filteredProjects)) {
-                addMessage(response,
-                        String.format("Could not find an Eclipse user with mail '%1$s' for committer of commit %2$s",
-                                committer.getMail(), c.getHash()),
-                        c.getHash());
-                addError(response, "Committing user must have an Eclipse Account", c.getHash());
-                return true;
-            }
-            // set the Eclipse committer as the basic committer w\ bot flag to pass information forward
-            eclipseCommitter = EclipseUser.createBotStub(committer);
-        }
-        // validate author access to the current repo
-        validateAuthorAccess(response, c, eclipseAuthor, filteredProjects);
-
-        // only committers can push on behalf of other users
-        if (response.isTrackedProject() && !eclipseAuthor.equals(eclipseCommitter)
-                && !isCommitter(response, eclipseCommitter, c.getHash(), filteredProjects)) {
-            addMessage(response, "You are not a project committer.", c.getHash());
-            addMessage(response, "Only project committers can push on behalf of others.", c.getHash());
-            addError(response, "You must be a committer to push on behalf of others.", c.getHash());
-        }
+    // retrieve the eclipse account for the author
+    EclipseUser eclipseAuthor = getIdentifiedUser(author);
+    if (eclipseAuthor == null) {
+      // if the user is a bot, generate a stubbed user
+      if (!userIsABot(author.getMail(), provider)) {
+        addMessage(
+            response,
+            String.format(
+                "Could not find an Eclipse user with mail '%1$s' for author of commit %2$s",
+                committer.getMail(), c.getHash()),
+            c.getHash());
+        addError(response, "Author must have an Eclipse Account", c.getHash());
         return true;
+      }
+      // set the Eclipse author as the basic committer w\ bot flag to pass information forward
+      eclipseAuthor = EclipseUser.createBotStub(author);
     }
 
-    /**
-     * Validates author access for the current commit. If there are errors, they are recorded in the response for the
-     * current request to be returned once all validation checks are completed.
-     *
-     * @param r the current response object for the request
-     * @param c the commit that is being validated
-     * @param eclipseAuthor the user to validate on a branch
-     * @param filteredProjects tracked projects for the current request
-     * @param provider the provider set for the current request
-     */
-    private void validateAuthorAccess(ValidationResponse r, Commit c, EclipseUser eclipseAuthor,
-            List<Project> filteredProjects) {
-        // check if the author matches to an eclipse user and is a committer
-        if (isCommitter(r, eclipseAuthor, c.getHash(), filteredProjects)) {
-            addMessage(r, "The author is a committer on the project.", c.getHash());
+    // retrieve the eclipse account for the committer
+    EclipseUser eclipseCommitter = getIdentifiedUser(committer);
+    if (eclipseCommitter == null) {
+      if (!userIsABot(committer.getMail(), provider)) {
+        addMessage(
+            response,
+            String.format(
+                "Could not find an Eclipse user with mail '%1$s' for committer of commit %2$s",
+                committer.getMail(), c.getHash()),
+            c.getHash());
+        addError(response, "Committing user must have an Eclipse Account", c.getHash());
+        return true;
+      }
+      // set the Eclipse committer as the basic committer w\ bot flag to pass information forward
+      eclipseCommitter = EclipseUser.createBotStub(committer);
+    }
+    // validate author access to the current repo
+    validateAuthorAccess(response, c, eclipseAuthor, filteredProjects, provider);
+
+    // only committers can push on behalf of other users
+    if (response.isTrackedProject()
+        && !eclipseAuthor.equals(eclipseCommitter)
+        && !isCommitter(response, eclipseCommitter, c.getHash(), filteredProjects, provider)) {
+      addMessage(response, "You are not a project committer.", c.getHash());
+      addMessage(response, "Only project committers can push on behalf of others.", c.getHash());
+      addError(response, "You must be a committer to push on behalf of others.", c.getHash());
+    }
+    return true;
+  }
+
+  /**
+   * Validates author access for the current commit. If there are errors, they are recorded in the
+   * response for the current request to be returned once all validation checks are completed.
+   *
+   * @param r the current response object for the request
+   * @param c the commit that is being validated
+   * @param eclipseAuthor the user to validate on a branch
+   * @param filteredProjects tracked projects for the current request
+   * @param provider the provider set for the current request
+   */
+  private void validateAuthorAccess(
+      ValidationResponse r,
+      Commit c,
+      EclipseUser eclipseAuthor,
+      List<Project> filteredProjects,
+      ProviderType provider) {
+    // check if the author matches to an eclipse user and is a committer
+    if (isCommitter(r, eclipseAuthor, c.getHash(), filteredProjects, provider)) {
+      addMessage(r, "The author is a committer on the project.", c.getHash());
+    } else {
+      addMessage(r, "The author is not a committer on the project.", c.getHash());
+      // check if the author is signed off if not a committer
+      if (eclipseAuthor.getEca().isSigned()) {
+        addMessage(
+            r,
+            "The author has a current Eclipse Contributor Agreement (ECA) on file.",
+            c.getHash());
+      } else {
+        addMessage(
+            r,
+            "The author does not have a current Eclipse Contributor Agreement (ECA) on file.\n"
+                + "If there are multiple commits, please ensure that each author has a ECA.",
+            c.getHash());
+        addError(r, "An Eclipse Contributor Agreement is required.", c.getHash());
+      }
+
+      // check if one of the signed off by footer lines matches the author email.
+      if (CommitHelper.getSignedOffByEmail(c)) {
+        addMessage(r, "The author has signed-off on the contribution.", c.getHash());
+      } else {
+        addMessage(
+            r,
+            "The author has not signed-off on the contribution.\n"
+                + "If there are multiple commits, please ensure that each commit is signed-off.",
+            c.getHash());
+        addError(
+            r,
+            "The contributor must sign-off on the contribution.",
+            c.getHash(),
+            APIStatusCode.ERROR_SIGN_OFF);
+      }
+    }
+  }
+
+  /**
+   * Checks whether the given user is a committer on the project. If they are and the project is
+   * also a specification for a working group, an additional access check is made against the user.
+   *
+   * <p>Additionally, a check is made to see if the user is a registered bot user for the given
+   * project. If they match for the given project, they are granted committer-like access to the
+   * repository.
+   *
+   * @param r the current response object for the request
+   * @param user the user to validate on a branch
+   * @param hash the hash of the commit that is being validated
+   * @param filteredProjects tracked projects for the current request
+   * @param provider the provider set for the current request
+   * @return true if user is considered a committer, false otherwise.
+   */
+  private boolean isCommitter(
+      ValidationResponse r,
+      EclipseUser user,
+      String hash,
+      List<Project> filteredProjects,
+      ProviderType provider) {
+    // iterate over filtered projects
+    for (Project p : filteredProjects) {
+      LOGGER.debug("Checking project '{}' for user '{}'", p.getName(), user.getName());
+      // check if any of the committers usernames match the current user
+      if (p.getCommitters().stream().anyMatch(u -> u.getUsername().equals(user.getName()))) {
+        // check if the current project is a committer project, and if the user can
+        // commit to specs
+        if (p.getSpecWorkingGroup() != null && !user.getEca().isCanContributeSpecProject()) {
+          // set error + update response status
+          r.addError(
+              hash,
+              String.format(
+                  "Project is a specification for the working group '%1$s', but user does not have permission to modify a specification project",
+                  p.getSpecWorkingGroup()),
+              APIStatusCode.ERROR_SPEC_PROJECT);
+          return false;
         } else {
-            addMessage(r, "The author is not a committer on the project.", c.getHash());
-            // check if the author is signed off if not a committer
-            if (eclipseAuthor.getEca().isSigned()) {
-                addMessage(r, "The author has a current Eclipse Contributor Agreement (ECA) on file.", c.getHash());
-            } else {
-                addMessage(r,
-                        "The author does not have a current Eclipse Contributor Agreement (ECA) on file.\n"
-                                + "If there are multiple commits, please ensure that each author has a ECA.",
-                        c.getHash());
-                addError(r, "An Eclipse Contributor Agreement is required.", c.getHash());
-            }
-
-            // check if one of the signed off by footer lines matches the author email.
-            if (CommitHelper.getSignedOffByEmail(c)) {
-                addMessage(r, "The author has signed-off on the contribution.", c.getHash());
-            } else {
-                addMessage(r,
-                        "The author has not signed-off on the contribution.\n"
-                                + "If there are multiple commits, please ensure that each commit is signed-off.",
-                        c.getHash());
-                addError(r, "The contributor must sign-off on the contribution.", c.getHash(),
-                        APIStatusCode.ERROR_SIGN_OFF);
-            }
+          LOGGER.debug(
+              "User '{}' was found to be a committer on current project repo '{}'",
+              user.getMail(),
+              p.getName());
+          return true;
         }
+      }
     }
-
-    /**
-     * Checks whether the given user is a committer on the project. If they are and the project is also a specification
-     * for a working group, an additional access check is made against the user.
-     *
-     * <p>
-     * Additionally, a check is made to see if the user is a registered bot user for the given project. If they match
-     * for the given project, they are granted committer-like access to the repository.
-     *
-     * @param r the current response object for the request
-     * @param user the user to validate on a branch
-     * @param hash the hash of the commit that is being validated
-     * @param filteredProjects tracked projects for the current request
-     * @return true if user is considered a committer, false otherwise.
-     */
-    private boolean isCommitter(ValidationResponse r, EclipseUser user, String hash, List<Project> filteredProjects) {
-        // iterate over filtered projects
-        for (Project p : filteredProjects) {
-            LOGGER.debug("Checking project '{}' for user '{}'", p.getName(), user.getName());
-            // check if any of the committers usernames match the current user
-            if (p.getCommitters().stream().anyMatch(u -> u.getUsername().equals(user.getName()))) {
-                // check if the current project is a committer project, and if the user can
-                // commit to specs
-                if (p.getSpecWorkingGroup() != null && !user.getEca().isCanContributeSpecProject()) {
-                    // set error + update response status
-                    r.addError(hash, String.format(
-                            "Project is a specification for the working group '%1$s', but user does not have permission to modify a specification project",
-                            p.getSpecWorkingGroup()), APIStatusCode.ERROR_SPEC_PROJECT);
-                    return false;
-                } else {
-                    LOGGER.debug("User '{}' was found to be a committer on current project repo '{}'", user.getMail(),
-                            p.getName());
-                    return true;
-                }
-            }
-        }
-        // check if user is a bot, either through early detection or through on-demand check
-        if (user.isBot() || userIsABot(user.getMail(), filteredProjects)) {
-            LOGGER.debug("User '{} <{}>' was found to be a bot", user.getName(), user.getMail());
-            return true;
-        }
-        return false;
+    // check if user is a bot, either through early detection or through on-demand check
+    if (user.isBot() || userIsABot(user.getMail(), provider)) {
+      LOGGER.debug("User '{} <{}>' was found to be a bot", user.getName(), user.getMail());
+      return true;
     }
+    return false;
+  }
 
-    private boolean userIsABot(String mail, List<Project> filteredProjects) {
-        if (mail == null || "".equals(mail.trim())) {
-            return false;
-        }
-        List<JsonNode> botObjs = getBots();
-        // for each of the matched projects, check the bot for the matching project ID
-        for (Project p : filteredProjects) {
-            for (JsonNode bot : botObjs) {
-                // if the project ID match, and one of the email fields matches, then user is bot
-                if (p.getProjectId().equalsIgnoreCase(bot.get("projectId").asText())
-                        && checkFieldsForMatchingMail(bot, mail)) {
-                    return true;
-                }
-            }
-        }
-        return false;
+  private boolean userIsABot(String mail, ProviderType provider) {
+    if (mail == null || "".equals(mail.trim())) {
+      return false;
     }
+    return getBots()
+        .stream()
+        .anyMatch(
+            bot -> {
+              if (ProviderType.GITHUB.equals(provider)) {
+                return bot.getGithubBot() != null
+                    && mail.equalsIgnoreCase(bot.getGithubBot().getEmail());
+              } else if (ProviderType.GITLAB.equals(provider)) {
+                return bot.getGitlabBot() != null
+                    && mail.equalsIgnoreCase(bot.getGitlabBot().getEmail());
+              } else {
+                return mail.equalsIgnoreCase(bot.getEmail());
+              }
+            });
+  }
 
-    /**
-     * Checks JSON node to look for email fields, both at the root, and nested email fields.
-     * 
-     * @param bot the bots JSON object representation
-     * @param mail the email to match against
-     * @return true if the bot has a matching email value, otherwise false
-     */
-    private boolean checkFieldsForMatchingMail(JsonNode bot, String mail) {
-        // check the root email for the bot for match
-        if (mail.equalsIgnoreCase(bot.get("email").asText(""))) {
-            return true;
-        }
-        Iterator<Entry<String, JsonNode>> i = bot.fields();
-        while (i.hasNext()) {
-            Entry<String, JsonNode> e = i.next();
-            // check that our field is an object with fields
-            JsonNode node = e.getValue();
-            if (node.isObject()) {
-                LOGGER.debug("Checking {} for bot email", e.getKey());
-                // if the mail matches (ignoring case) user is bot
-                if (mail.equalsIgnoreCase(node.get("email").asText(""))) {
-                    LOGGER.debug("Found match for bot email {}", mail);
-                    return true;
-                }
-            }
-        }
-        return false;
+  /**
+   * Retrieves projects valid for the current request, or an empty list if no data or matching
+   * project repos could be found.
+   *
+   * @param req the current request
+   * @return list of matching projects for the current request, or an empty list if none found.
+   */
+  private List<Project> retrieveProjectsForRequest(ValidationRequest req) {
+    String repoUrl = req.getRepoUrl().getPath();
+    // check for all projects that make use of the given repo
+    List<Project> availableProjects = projects.getProjects();
+    if (availableProjects == null || availableProjects.isEmpty()) {
+      return Collections.emptyList();
     }
+    LOGGER.debug("Checking projects for repos that end with: {}", repoUrl);
 
-    /**
-     * Retrieves projects valid for the current request, or an empty list if no data or matching project repos could be
-     * found.
-     *
-     * @param req the current request
-     * @return list of matching projects for the current request, or an empty list if none found.
-     */
-    private List<Project> retrieveProjectsForRequest(ValidationRequest req) {
-        String repoUrl = req.getRepoUrl().getPath();
-        // check for all projects that make use of the given repo
-        List<Project> availableProjects = projects.getProjects();
-        if (availableProjects == null || availableProjects.isEmpty()) {
-            return Collections.emptyList();
-        }
-        LOGGER.debug("Checking projects for repos that end with: {}", repoUrl);
-
-        // filter the projects based on the repo URL. At least one repo in project must
-        // match the repo URL to be valid
-        if (ProviderType.GITLAB.equals(req.getProvider())) {
-            return availableProjects.stream()
-                    .filter(p -> p.getGitlabRepos().stream().anyMatch(re -> re.getUrl().endsWith(repoUrl)))
-                    .collect(Collectors.toList());
-        } else if (ProviderType.GITHUB.equals(req.getProvider())) {
-            return availableProjects.stream()
-                    .filter(p -> p.getGithubRepos().stream().anyMatch(re -> re.getUrl().endsWith(repoUrl)))
-                    .collect(Collectors.toList());
-        } else if (ProviderType.GERRIT.equals(req.getProvider())) {
-            return availableProjects.stream()
-                    .filter(p -> p.getGerritRepos().stream().anyMatch(re -> re.getUrl().endsWith(repoUrl)))
-                    .collect(Collectors.toList());
-        } else {
-            return availableProjects.stream()
-                    .filter(p -> p.getRepos().stream().anyMatch(re -> re.getUrl().endsWith(repoUrl)))
-                    .collect(Collectors.toList());
-        }
+    // filter the projects based on the repo URL. At least one repo in project must
+    // match the repo URL to be valid
+    if (ProviderType.GITLAB.equals(req.getProvider())) {
+      return availableProjects
+          .stream()
+          .filter(p -> p.getGitlabRepos().stream().anyMatch(re -> re.getUrl().endsWith(repoUrl)))
+          .collect(Collectors.toList());
+    } else if (ProviderType.GITHUB.equals(req.getProvider())) {
+      return availableProjects
+          .stream()
+          .filter(p -> p.getGithubRepos().stream().anyMatch(re -> re.getUrl().endsWith(repoUrl)))
+          .collect(Collectors.toList());
+    } else if (ProviderType.GERRIT.equals(req.getProvider())) {
+      return availableProjects
+          .stream()
+          .filter(p -> p.getGerritRepos().stream().anyMatch(re -> re.getUrl().endsWith(repoUrl)))
+          .collect(Collectors.toList());
+    } else {
+      return availableProjects
+          .stream()
+          .filter(p -> p.getRepos().stream().anyMatch(re -> re.getUrl().endsWith(repoUrl)))
+          .collect(Collectors.toList());
     }
+  }
 
-    /**
-     * Retrieves an Eclipse Account user object given the Git users email address (at minimum). This is facilitated
-     * using the Eclipse Foundation accounts API, along short lived in-memory caching for performance and some
-     * protection against duplicate requests.
-     *
-     * @param user the user to retrieve Eclipse Account information for
-     * @return the Eclipse Account user information if found, or null if there was an error or no user exists.
-     */
-    private EclipseUser getIdentifiedUser(GitUser user) {
-        // get the Eclipse account for the user
-        try {
-            // use cache to avoid asking for the same user repeatedly on repeated requests
-            @SuppressWarnings("unchecked")
-            Optional<List<EclipseUser>> users = cache.get("user|" + user.getMail(),
-                    () -> accounts.getUsers("Bearer " + oauth.getToken(), null, null, user.getMail()),
-                    (Class<List<EclipseUser>>) (Object) List.class);
-            if (!users.isPresent() || users.get().isEmpty()) {
-                LOGGER.error("No users found for mail '{}'", user.getMail());
-                return null;
-            }
-            return users.get().get(0);
-        } catch (WebApplicationException e) {
-            Response r = e.getResponse();
-            if (r != null && r.getStatus() == 404) {
-                LOGGER.error("No users found for mail '{}'", user.getMail());
-            } else {
-                LOGGER.error("Error while checking for user", e);
-            }
-        }
+  /**
+   * Retrieves an Eclipse Account user object given the Git users email address (at minimum). This
+   * is facilitated using the Eclipse Foundation accounts API, along short lived in-memory caching
+   * for performance and some protection against duplicate requests.
+   *
+   * @param user the user to retrieve Eclipse Account information for
+   * @return the Eclipse Account user information if found, or null if there was an error or no user
+   *     exists.
+   */
+  private EclipseUser getIdentifiedUser(GitUser user) {
+    // get the Eclipse account for the user
+    try {
+      // use cache to avoid asking for the same user repeatedly on repeated requests
+      @SuppressWarnings("unchecked")
+      Optional<List<EclipseUser>> users =
+          cache.get(
+              "user|" + user.getMail(),
+              () -> accounts.getUsers("Bearer " + oauth.getToken(), null, null, user.getMail()),
+              (Class<List<EclipseUser>>) (Object) List.class);
+      if (!users.isPresent() || users.get().isEmpty()) {
+        LOGGER.error("No users found for mail '{}'", user.getMail());
         return null;
+      }
+      return users.get().get(0);
+    } catch (WebApplicationException e) {
+      Response r = e.getResponse();
+      if (r != null && r.getStatus() == 404) {
+        LOGGER.error("No users found for mail '{}'", user.getMail());
+      } else {
+        LOGGER.error("Error while checking for user", e);
+      }
     }
+    return null;
+  }
 
-    @SuppressWarnings("unchecked")
-    private List<JsonNode> getBots() {
-        Optional<List<JsonNode>> allBots = cache.get("allBots", () -> bots.getBots(),
-                (Class<List<JsonNode>>) (Object) List.class);
-        if (!allBots.isPresent()) {
-            return Collections.emptyList();
-        }
-        return allBots.get();
+  @SuppressWarnings("unchecked")
+  private List<BotUser> getBots() {
+    Optional<List<BotUser>> allBots =
+        cache.get("allBots", () -> bots.getBots(), (Class<List<BotUser>>) (Object) List.class);
+    if (!allBots.isPresent()) {
+      return Collections.emptyList();
     }
+    return allBots.get();
+  }
 
-    private void addMessage(ValidationResponse r, String message, String hash) {
-        addMessage(r, message, hash, APIStatusCode.SUCCESS_DEFAULT);
-    }
+  private void addMessage(ValidationResponse r, String message, String hash) {
+    addMessage(r, message, hash, APIStatusCode.SUCCESS_DEFAULT);
+  }
 
-    private void addError(ValidationResponse r, String message, String hash) {
-        addError(r, message, hash, APIStatusCode.ERROR_DEFAULT);
-    }
+  private void addError(ValidationResponse r, String message, String hash) {
+    addError(r, message, hash, APIStatusCode.ERROR_DEFAULT);
+  }
 
-    private void addMessage(ValidationResponse r, String message, String hash, APIStatusCode code) {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug(message);
-        }
-        r.addMessage(hash, message, code);
+  private void addMessage(ValidationResponse r, String message, String hash, APIStatusCode code) {
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug(message);
     }
+    r.addMessage(hash, message, code);
+  }
 
-    private void addError(ValidationResponse r, String message, String hash, APIStatusCode code) {
-        LOGGER.error(message);
-        // only add as strict error for tracked projects
-        if (r.isTrackedProject() || r.isStrictMode()) {
-            r.addError(hash, message, code);
-        } else {
-            r.addWarning(hash, message, code);
-        }
+  private void addError(ValidationResponse r, String message, String hash, APIStatusCode code) {
+    LOGGER.error(message);
+    // only add as strict error for tracked projects
+    if (r.isTrackedProject() || r.isStrictMode()) {
+      r.addError(hash, message, code);
+    } else {
+      r.addWarning(hash, message, code);
     }
+  }
 }

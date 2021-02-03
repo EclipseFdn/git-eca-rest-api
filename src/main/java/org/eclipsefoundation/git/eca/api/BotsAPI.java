@@ -16,8 +16,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
-
-import com.fasterxml.jackson.databind.JsonNode;
+import org.eclipsefoundation.git.eca.model.BotUser;
 
 /**
  * Interface for interacting with the Eclipse Foundation Bots API.
@@ -36,5 +35,5 @@ public interface BotsAPI {
 	 */
 	@GET
 	@Produces("application/json")
-	List<JsonNode> getBots();
+	List<BotUser> getBots();
 }
