@@ -291,7 +291,6 @@ public class ValidationResource {
         List<JsonNode> botObjs = getBots();
         // for each of the matched projects, check the bot for the matching project ID
         for (Project p : filteredProjects) {
-            LOGGER.debug("Checking project {} for matching bots", p.getProjectId());
             for (JsonNode bot : botObjs) {
                 // if the project ID match, and one of the email fields matches, then user is bot
                 if (p.getProjectId().equalsIgnoreCase(bot.get("projectId").asText())

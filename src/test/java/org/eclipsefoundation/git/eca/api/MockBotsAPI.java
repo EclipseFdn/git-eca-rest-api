@@ -16,11 +16,8 @@ import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.rest.client.inject.RestClient;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
+import org.eclipsefoundation.git.eca.model.BotUser;
+import org.eclipsefoundation.git.eca.model.BotUser.SiteSpecificBot;
 
 import io.quarkus.test.Mock;
 
@@ -29,43 +26,43 @@ import io.quarkus.test.Mock;
 @ApplicationScoped
 public class MockBotsAPI implements BotsAPI {
 
-	private List<JsonNode> src;
+	private List<BotUser> src;
 	
 	@PostConstruct
 	public void build() {
 		this.src = new ArrayList<>();
-		ObjectNode b1 = new ObjectNode(JsonNodeFactory.instance);
-        b1.set("id", new TextNode("1"));
-        b1.set("email", new TextNode("1.bot@eclipse.org"));
-		b1.set("projectId", new TextNode("sample.proj"));
-		b1.set("username", new TextNode("projbot"));
+		BotUser b1 = new BotUser();
+		b1.setId("1");
+		b1.setEmail("1.bot@eclipse.org");
+		b1.setProjectId("sample.proj");
+		b1.setUsername("projbot");
 		src.add(b1);
-
-        ObjectNode b2 = new ObjectNode(JsonNodeFactory.instance);
-		b2.set("id", new TextNode("10"));
-		b2.set("email", new TextNode("2.bot@eclipse.org"));
-		b2.set("projectId", new TextNode("sample.proto"));
-		b2.set("username", new TextNode("protobot"));
-        ObjectNode ssbGH = new ObjectNode(JsonNodeFactory.instance);
-		ssbGH.set("email", new TextNode("2.bot-github@eclipse.org"));
-		ssbGH.set("username", new TextNode("protobot-gh"));
-		b2.set("github.com", ssbGH);
+		
+		BotUser b2 = new BotUser();
+		b2.setId("10");
+		b2.setEmail("2.bot@eclipse.org");
+		b2.setProjectId("sample.proto");
+		b2.setUsername("protobot");
+		SiteSpecificBot ssbGH = new SiteSpecificBot();
+		ssbGH.setEmail("2.bot-github@eclipse.org");
+		ssbGH.setUsername("protobot-gh");
+		b2.setGithubBot(ssbGH);
 		src.add(b2);
-
-        ObjectNode b3 = new ObjectNode(JsonNodeFactory.instance);
-		b3.set("id", new TextNode("11"));
-		b3.set("email", new TextNode("3.bot@eclipse.org"));
-		b3.set("projectId", new TextNode("spec.proj"));
-		b3.set("username", new TextNode("specbot"));
-		ObjectNode ssbGL = new ObjectNode(JsonNodeFactory.instance);
-		ssbGL.set("email", new TextNode("3.bot-gitlab@eclipse.org"));
-		ssbGL.set("username", new TextNode("protobot-gl"));
-		b3.set("gitlab.eclipse.org",ssbGL);
+		
+		BotUser b3 = new BotUser();
+		b3.setId("11");
+		b3.setEmail("3.bot@eclipse.org");
+		b3.setProjectId("spec.proj");
+		b3.setUsername("specbot");
+		SiteSpecificBot ssbGL = new SiteSpecificBot();
+		ssbGL.setEmail("3.bot-gitlab@eclipse.org");
+		ssbGL.setUsername("protobot-gl");
+		b3.setGitlabBot(ssbGL);
 		src.add(b3);
 	}
 
 	@Override
-	public List<JsonNode> getBots() {
+	public List<BotUser> getBots() {
 		return new ArrayList<>(src);
 	}
 }
