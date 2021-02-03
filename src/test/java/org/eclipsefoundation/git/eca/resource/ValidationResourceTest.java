@@ -671,8 +671,8 @@ class ValidationResourceTest {
   void validateBotCommiterAccessGithub() throws URISyntaxException {
     // set up test users
     GitUser g1 = new GitUser();
-    g1.setName("projbot");
-    g1.setMail("1.bot@eclipse.org");
+    g1.setName("grunter");
+    g1.setMail("grunt@important.co");
 
     List<Commit> commits = new ArrayList<>();
     // create sample commits
@@ -689,33 +689,7 @@ class ValidationResourceTest {
     vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/sample"));
     vr.setCommits(commits);
     // test output w/ assertions
-    // Should be valid as bots should only commit on their own projects (including aliases)
-    given().body(vr).contentType(ContentType.JSON).when().post("/eca").then().statusCode(200);
-  }
-
-  @Test
-  void validateBotCommiterAccessGithub_untracked() throws URISyntaxException {
-    // set up test users
-    GitUser g1 = new GitUser();
-    g1.setName("projbot");
-    g1.setMail("1.bot@eclipse.org");
-
-    List<Commit> commits = new ArrayList<>();
-    // create sample commits
-    Commit c1 = new Commit();
-    c1.setAuthor(g1);
-    c1.setCommitter(g1);
-    c1.setHash("123456789abcdefghijklmnop");
-    c1.setSubject("All of the things");
-    c1.setParents(Arrays.asList("46bb69bf6aa4ed26b2bf8c322ae05bef0bcc5c10"));
-    commits.add(c1);
-
-    ValidationRequest vr = new ValidationRequest();
-    vr.setProvider(ProviderType.GITHUB);
-    vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/sample-untracked"));
-    vr.setCommits(commits);
-    // test output w/ assertions
-    // Should be valid as bots can commit on any untracked project (legacy support)
+    // Should be valid as user is a committer
     given().body(vr).contentType(ContentType.JSON).when().post("/eca").then().statusCode(200);
   }
 
@@ -773,62 +747,10 @@ class ValidationResourceTest {
 
   @Test
   void validateBotCommiterAccessGitlab() throws URISyntaxException {
-      // set up test users
-      GitUser g1 = new GitUser();
-      g1.setName("protobot-gh");
-      g1.setMail("2.bot-github@eclipse.org");
-
-      List<Commit> commits = new ArrayList<>();
-      // create sample commits
-      Commit c1 = new Commit();
-      c1.setAuthor(g1);
-      c1.setCommitter(g1);
-      c1.setHash("123456789abcdefghijklmnop");
-      c1.setSubject("All of the things");
-      c1.setParents(Arrays.asList("46bb69bf6aa4ed26b2bf8c322ae05bef0bcc5c10"));
-      commits.add(c1);
-
-      ValidationRequest vr = new ValidationRequest();
-      vr.setProvider(ProviderType.GITLAB);
-      vr.setRepoUrl(new URI("https://gitlab.eclipse.org/eclipse/dash/dash.handbook.test"));
-      vr.setCommits(commits);
-      // test output w/ assertions
-      // Should be valid as bots should only commit on their own projects (including aliases)
-      given().body(vr).contentType(ContentType.JSON).when().post("/eca").then().statusCode(200);
-  }
-
-  @Test
-  void validateBotCommiterAccessGitlab_untracked() throws URISyntaxException {
-      // set up test users
-      GitUser g1 = new GitUser();
-      g1.setName("protobot-gh");
-      g1.setMail("2.bot-github@eclipse.org");
-
-      List<Commit> commits = new ArrayList<>();
-      // create sample commits
-      Commit c1 = new Commit();
-      c1.setAuthor(g1);
-      c1.setCommitter(g1);
-      c1.setHash("123456789abcdefghijklmnop");
-      c1.setSubject("All of the things");
-      c1.setParents(Arrays.asList("46bb69bf6aa4ed26b2bf8c322ae05bef0bcc5c10"));
-      commits.add(c1);
-
-      ValidationRequest vr = new ValidationRequest();
-      vr.setProvider(ProviderType.GITLAB);
-      vr.setRepoUrl(new URI("https://gitlab.eclipse.org/eclipse/dash/dash.handbook.untracked"));
-      vr.setCommits(commits);
-      // test output w/ assertions
-      // Should be valid as bots can commit on any untracked project (legacy support)
-      given().body(vr).contentType(ContentType.JSON).when().post("/eca").then().statusCode(200);
-  }
-  
-  @Test
-  void validateBotCommiterAccessGitlab_invalidBot() throws URISyntaxException {
-    // set up test users (wrong bot for project)
+    // set up test users
     GitUser g1 = new GitUser();
-    g1.setName("specbot");
-    g1.setMail("3.bot@eclipse.org");
+    g1.setName("specbot-gl");
+    g1.setMail("3.bot-gitlab@eclipse.org");
 
     List<Commit> commits = new ArrayList<>();
     // create sample commits
@@ -871,7 +793,7 @@ class ValidationResourceTest {
     vr.setRepoUrl(new URI("https://gitlab.eclipse.org/eclipse/dash/dash.git"));
     vr.setCommits(commits);
     // test output w/ assertions
-    // Should be valid as wrong email was used, but is still bot email alias (uses Gerrit bot email)
+    // Should be invalid as wrong email was used for bot (uses Gerrit bot email)
     given().body(vr).contentType(ContentType.JSON).when().post("/eca").then().statusCode(200);
   }
 
@@ -903,61 +825,6 @@ class ValidationResourceTest {
   }
 
   @Test
-  void validateBotCommiterAccessGerrit_untracked() throws URISyntaxException {
-    // set up test users
-    GitUser g1 = new GitUser();
-    g1.setName("protobot");
-    g1.setMail("2.bot@eclipse.org");
-
-    List<Commit> commits = new ArrayList<>();
-    // create sample commits
-    Commit c1 = new Commit();
-    c1.setAuthor(g1);
-    c1.setCommitter(g1);
-    c1.setHash("123456789abcdefghijklmnop");
-    c1.setSubject("All of the things");
-    c1.setParents(Arrays.asList("46bb69bf6aa4ed26b2bf8c322ae05bef0bcc5c10"));
-    commits.add(c1);
-
-    ValidationRequest vr = new ValidationRequest();
-    vr.setProvider(ProviderType.GERRIT);
-    vr.setRepoUrl(new URI("/gitroot/sample/untracked.project"));
-    vr.setCommits(commits);
-    vr.setStrictMode(true);
-    // test output w/ assertions
-    // Should be valid as bots can commit on any untracked project (legacy support)
-    given().body(vr).contentType(ContentType.JSON).when().post("/eca").then().statusCode(200);
-  }
-
-  @Test
-  void validateBotCommiterAccessGerrit_invalidBot() throws URISyntaxException {
-      // set up test users -  (wrong bot for project)
-      GitUser g1 = new GitUser();
-      g1.setName("specbot");
-      g1.setMail("3.bot@eclipse.org");
-
-      List<Commit> commits = new ArrayList<>();
-      // create sample commits
-      Commit c1 = new Commit();
-      c1.setAuthor(g1);
-      c1.setCommitter(g1);
-      c1.setHash("123456789abcdefghijklmnop");
-      c1.setSubject("All of the things");
-      c1.setParents(Arrays.asList("46bb69bf6aa4ed26b2bf8c322ae05bef0bcc5c10"));
-      commits.add(c1);
-
-      ValidationRequest vr = new ValidationRequest();
-      vr.setProvider(ProviderType.GERRIT);
-      vr.setRepoUrl(new URI("/gitroot/sample/gerrit.other-project"));
-      vr.setCommits(commits);
-      vr.setStrictMode(true);
-      // test output w/ assertions
-      // Should be invalid as bots should only commit on their own projects (wrong project)
-      given().body(vr).contentType(ContentType.JSON).when().post("/eca").then().statusCode(403);
-      
-  }
-
-  @Test
   void validateBotCommiterAccessGerrit_aliasEmail() throws URISyntaxException {
     // set up test users - uses GH (instead of expected Gerrit/LDAP email)
     GitUser g1 = new GitUser();
@@ -980,7 +847,7 @@ class ValidationResourceTest {
     vr.setCommits(commits);
     vr.setStrictMode(true);
     // test output w/ assertions
-    // Should be valid as wrong email was used, but is still bot email alias 
+    // Should be valid as bots should only commit on their own projects (including aliases)
     given().body(vr).contentType(ContentType.JSON).when().post("/eca").then().statusCode(200);
   }
 }

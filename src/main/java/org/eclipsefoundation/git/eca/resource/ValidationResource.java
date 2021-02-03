@@ -289,10 +289,6 @@ public class ValidationResource {
             return false;
         }
         List<JsonNode> botObjs = getBots();
-        // if there are no matching projects, then check against all bots, not just project bots
-        if (filteredProjects == null || filteredProjects.isEmpty()) {
-            return botObjs.stream().anyMatch(bot -> checkFieldsForMatchingMail(bot, mail));
-        }
         // for each of the matched projects, check the bot for the matching project ID
         for (Project p : filteredProjects) {
             LOGGER.debug("Checking project {} for matching bots", p.getProjectId());
