@@ -460,74 +460,6 @@ class ValidationResourceTest {
   }
 
   @Test
-  void validateProxyCommitPush() throws URISyntaxException {
-    // set up test users
-    GitUser g1 = new GitUser();
-    g1.setName("The Wizard");
-    g1.setMail("code.wiz@important.co");
-
-    GitUser g2 = new GitUser();
-    g2.setName("Barshall Blathers");
-    g2.setMail("slom@eclipse-foundation.org");
-
-    // CASE 1: Committer pushing for non-committer author
-    List<Commit> commits = new ArrayList<>();
-    // create sample commits
-    Commit c1 = new Commit();
-    c1.setAuthor(g2);
-    c1.setCommitter(g1);
-    c1.setBody(String.format("Signed-off-by: %s <%s>", g2.getName(), g2.getMail()));
-    c1.setHash("123456789abcdefghijklmnop");
-    c1.setSubject("All of the things");
-    c1.setParents(Collections.emptyList());
-    commits.add(c1);
-
-    ValidationRequest vr = new ValidationRequest();
-    vr.setProvider(ProviderType.GITHUB);
-    vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/tck-proto.git"));
-    vr.setCommits(commits);
-
-    // test output w/ assertions
-    // Should be valid as Wizard is a committer on proj
-    given()
-        .body(vr)
-        .contentType(ContentType.JSON)
-        .when()
-        .post("/eca")
-        .then()
-        .statusCode(200)
-        .body("passed", is(true), "errorCount", is(0));
-
-    // CASE 2: Non-committer pushing for non-committer author
-    commits = new ArrayList<>();
-    // create sample commits
-    c1 = new Commit();
-    c1.setAuthor(g2);
-    c1.setCommitter(g1);
-    c1.setBody(String.format("Signed-off-by: %s <%s>", g2.getName(), g2.getMail()));
-    c1.setHash("123456789abcdefghijklmnop");
-    c1.setSubject("All of the things");
-    c1.setParents(Arrays.asList("46bb69bf6aa4ed26b2bf8c322ae05bef0bcc5c10"));
-    commits.add(c1);
-
-    vr = new ValidationRequest();
-    vr.setProvider(ProviderType.GITHUB);
-    vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/prototype.git"));
-    vr.setCommits(commits);
-
-    // test output w/ assertions
-    // Should be invalid as Wizard is not a committer on proj
-    given()
-        .body(vr)
-        .contentType(ContentType.JSON)
-        .when()
-        .post("/eca")
-        .then()
-        .statusCode(403)
-        .body("passed", is(false), "errorCount", is(1));
-  }
-
-  @Test
   void validateNoECA_author() throws URISyntaxException {
     // set up test users
     GitUser g1 = new GitUser();
@@ -593,7 +525,7 @@ class ValidationResourceTest {
     vr.setRepoUrl(new URI("http://www.github.com/eclipsefdn/sample"));
     vr.setCommits(commits);
     // test output w/ assertions
-    // Error count should be 2 - first is committer access, then proxy push violation
+    // Error count should be 1 for just the committer access
     // Status 403 (forbidden) is the standard return for invalid requests
     given()
         .body(vr)
@@ -602,7 +534,7 @@ class ValidationResourceTest {
         .post("/eca")
         .then()
         .statusCode(403)
-        .body("passed", is(false), "errorCount", is(2));
+        .body("passed", is(false), "errorCount", is(1));
   }
   @Test
   void validateNoECA_both() throws URISyntaxException {

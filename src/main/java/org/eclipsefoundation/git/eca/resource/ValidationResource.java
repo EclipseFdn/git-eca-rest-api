@@ -230,13 +230,6 @@ public class ValidationResource {
     // check committer general access
     boolean isCommittingUserCommitter = isCommitter(response, eclipseCommitter, c.getHash(), filteredProjects);
     validateUserAccessPartial(response, c, eclipseCommitter, isCommittingUserCommitter, APIStatusCode.ERROR_COMMITTER);
-
-    // only committers can push on behalf of other users
-    if (response.isTrackedProject() && !eclipseAuthor.equals(eclipseCommitter) && !isCommittingUserCommitter) {
-      addMessage(response, "You are not a project committer.", c.getHash());
-      addMessage(response, "Only project committers can push on behalf of others.", c.getHash());
-      addError(response, "You must be a committer to push on behalf of others.", c.getHash(), APIStatusCode.ERROR_PROXY_PUSH);
-    }
     return true;
   }
 
