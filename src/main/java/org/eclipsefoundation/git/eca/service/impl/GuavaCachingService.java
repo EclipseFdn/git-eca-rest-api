@@ -120,13 +120,11 @@ public class GuavaCachingService implements CachingService {
 
 	@Override
 	public void remove(String key) {
-		// TODO we probably want to shift this to target a cache
 		caches.values().stream().forEach(c -> c.invalidate(key));
 	}
 
 	@Override
 	public void removeAll() {
-		// TODO we probably want to be able to target a given cache
 		caches.values().stream().forEach(Cache::invalidateAll);
 	}
 
