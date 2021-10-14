@@ -1,5 +1,12 @@
 # git-eca-rest-api
 
+---
+**NOTE**
+
+This project was migrated to [Eclipse Gitlab](https://gitlab.eclipse.org/eclipsefdn/it/api/git-eca-rest-api) on October 14, 2021.
+
+---
+
 This project uses Quarkus, the Supersonic Subatomic Java Framework.
 
 If you want to learn more about Quarkus, please visit its website: https://quarkus.io/ .
